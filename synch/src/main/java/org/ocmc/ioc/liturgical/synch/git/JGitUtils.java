@@ -37,8 +37,18 @@ import org.ocmc.ioc.liturgical.utils.ErrorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class GitUtils {
-	private static final Logger logger = LoggerFactory.getLogger(GitUtils.class);
+/**
+ * Provides utilities for accessing Git repositories.  
+ * Note that the Github api (api.github.com) has rate limits:
+ * 60 requests per hour per account for unauthenticated requests
+ * 5000 requests per hour per account for authenticated.
+ * 
+ * 
+ * @author mac002
+ *
+ */
+public class JGitUtils {
+	private static final Logger logger = LoggerFactory.getLogger(JGitUtils.class);
 	private static String emptyInitialTreeObjectId = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
 
 	/**
@@ -254,7 +264,7 @@ public class GitUtils {
 		    Repository repository = new FileRepository(repoPath.endsWith("git") ? repoPath : repoPath + "/.git");
             ObjectId currentHeadTree = repository.resolve("HEAD^{tree}");
 	        RevWalk revWalk = new RevWalk (repository);
-	        ObjectId headCommitId = GitUtils.getHeadCommitId(repoPath);
+	        ObjectId headCommitId = JGitUtils.getHeadCommitId(repoPath);
 	        RevCommit commit = revWalk.parseCommit(headCommitId);
             // Prepare means to show actual diffs
             ByteArrayOutputStream out = new ByteArrayOutputStream();

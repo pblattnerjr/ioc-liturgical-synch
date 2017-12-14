@@ -10,7 +10,7 @@ import java.util.TreeMap;
 
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.revwalk.RevCommit;
-import org.ocmc.ioc.liturgical.synch.git.GitUtils;
+import org.ocmc.ioc.liturgical.synch.git.JGitUtils;
 import org.ocmc.ioc.liturgical.utils.ErrorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +32,7 @@ public class GitDiffEntry {
 		this.commit = commit;
 		this.entry = entry;
 		this.setTopicsAndLibraries();
-		this.timestamp = GitUtils.gitTimeToTimestamp(this.commit.getCommitTime());
+		this.timestamp = JGitUtils.gitTimeToTimestamp(this.commit.getCommitTime());
 	}
 	
 	private void setTopicsAndLibraries() {

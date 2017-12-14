@@ -3,6 +3,10 @@ package org.ocmc.ioc.liturgical.synch.constants;
 import org.apache.commons.io.FilenameUtils;
 import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepo;
 import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepositories;
+import org.ocmc.ioc.liturgical.synch.git.GithubApiClient;
+import org.ocmc.ioc.liturgical.utils.ErrorUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public enum GITHUB_INITIAL_ARES_URLS {
 	EN_UK_LASH("https://github.com/AGES-Initiatives/ages-alwb-library-lash.git")
@@ -21,23 +25,33 @@ public enum GITHUB_INITIAL_ARES_URLS {
 	, KIK_KE_OAG("https://github.com/AGES-Initiatives/oak-alwb-library-kik-ke-oak.git")
 	, SWA_KE_OAK("https://github.com/AGES-Initiatives/oak-alwb-library-swh-ke-oak.git")
 	;
-	
+
+	public String account = "";
+	public String repoName = "";
 	public String url = "";
 	public String repoDirPath = "";
 
-	private GITHUB_INITIAL_ARES_URLS(String url) {
+	private GITHUB_INITIAL_ARES_URLS(
+			String url
+			) {
 		this.url = url;
-		String fileName = FilenameUtils.getName(url);
-		if (fileName.endsWith(".git")) {
-			fileName = fileName.substring(0, fileName.length()-4);
+		try {
+			String [] parts = url.split("/");
+			account = parts[parts.length-2];
+			repoName = parts[parts.length-1];
+			repoName = repoName.substring(0, repoName.length()-4);
+			this.repoDirPath = repoName;
+		} catch (Exception e) {
+			ErrorUtils.reportAnyErrors(GITHUB_INITIAL_ARES_URLS.class.getName() + " " + e.getMessage());
 		}
-		this.repoDirPath = fileName;
 	}
 	
 	public static GithubRepositories toPOJO() {
 		GithubRepositories repos = new GithubRepositories();
 		for (GITHUB_INITIAL_ARES_URLS item : GITHUB_INITIAL_ARES_URLS.values()) {
 			GithubRepo repo = new GithubRepo(item.url);
+			repo.setAccount(item.account);
+			repo.setName(item.repoName);
 			repos.addRepo(repo);
 		}
 		return repos;

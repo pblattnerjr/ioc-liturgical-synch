@@ -1,5 +1,6 @@
 package org.ocmc.ioc.liturgical.synch.managers;
 
+import java.time.Instant;
 import java.util.Map;
 
 import org.neo4j.driver.v1.AuthTokens;
@@ -16,6 +17,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import org.ocmc.ioc.liturgical.schemas.constants.DATA_SOURCES;
 import org.ocmc.ioc.liturgical.schemas.constants.HTTP_RESPONSE_CODES;
 import org.ocmc.ioc.liturgical.schemas.constants.STATUS;
 import org.ocmc.ioc.liturgical.schemas.models.ws.response.RequestStatus;
@@ -23,6 +25,8 @@ import org.ocmc.ioc.liturgical.schemas.models.ws.response.ResultJsonObjectArray;
 import org.ocmc.ioc.liturgical.synch.constants.Constants;
 import org.ocmc.ioc.liturgical.synch.exceptions.DbException;
 import org.ocmc.ioc.liturgical.schemas.models.ModelHelpers;
+import org.ocmc.ioc.liturgical.schemas.models.db.docs.ontology.TextLiturgical;
+import org.ocmc.ioc.liturgical.schemas.models.synch.AresPushTransaction;
 import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepositories;
 import org.ocmc.ioc.liturgical.schemas.models.synch.Transaction;
 import org.ocmc.ioc.liturgical.utils.ErrorUtils;
@@ -579,6 +583,88 @@ public class SynchManager {
 			this.githubRepos.setPrettyPrint(true);
 			logger.info("Github Repos Synch Info:\n" + this.githubRepos.toJsonString());
 		}
+	}
+
+	/**
+	 * This method will create a Transaction from the AresPushTransaction
+	 * and record it in the synch database.  
+	 * 
+	 * Because we do not know at this point whether a doc already exists,
+	 * it is necessary to use MERGE instead of CREATE and to add
+	 * ON CREATE and ON MATCH clauses.
+	 * 
+	 * @param ares transaction to be pushed
+	 * @return the status of the request
+	 */
+	public RequestStatus processAresPushTransaction(AresPushTransaction ares) {
+		try {
+			String query = null; // if remains null, no transaction will be recorded
+			TextLiturgical doc = new TextLiturgical(
+					ares.toLibrary
+					, ares.toTopic
+					, ares.toKey
+					);
+			doc.setValue(ares.toValue);
+			doc.setComment(ares.toComment);
+			doc.setCreatedBy(ares.getRequestingUser());
+			doc.setCreatedWhen(Instant.now().toString());
+			doc.setModifiedBy(ares.getRequestingUser());
+			doc.setModifiedWhen(doc.getCreatedWhen());
+			doc.setDataSource(DATA_SOURCES.GITHUB);
+
+			switch (ares.type) {
+			case ADD_KEY_VALUE:
+				query = this.createMergeNodeQuery(doc);
+				break;
+			case CHANGE_OF_KEY:
+				break;
+			case CHANGE_OF_LIBRARY:
+				break;
+			case CHANGE_OF_TOPIC:
+				break;
+			case CHANGE_OF_VALUE: // treat same as ADD_KEY_VALUE
+				query = this.createMergeNodeQuery(doc);
+				break;
+			case DELETE_KEY_VALUE:
+				// match id and delete node, relationships, and related docs !!! danger !!!
+				break;
+			case DELETE_TOPIC:
+				// match library~topic and delete all nodes, relationships, and related docs !!! danger !!!
+				break;
+			case UNKNOWN: // fall through to default
+			default:
+				logger.error("unknown ares transaction:" + ares.toJsonString());
+				break;
+			
+			}
+			if (query != null) {
+				Transaction transaction = new Transaction(
+						query
+						, doc
+						, ares.requestingServer
+				);
+				recordTransaction(transaction);
+			}
+		} catch (Exception e) {
+			ErrorUtils.report(logger, e);
+		}
+		RequestStatus status = new RequestStatus();
+		return status;
+	}
+	
+	private String createMergeNodeQuery(
+			TextLiturgical doc
+			) {
+		StringBuffer sb = new StringBuffer();
+		sb.append("MERGE (n:");
+		sb.append(doc.fetchOntologyLabels());
+		sb.append(" {id: '");
+		sb.append(doc.id);
+		sb.append("'}) ");
+		sb.append("ON CREATE SET n = {props} ");
+		sb.append("ON MATCH SET n.value = {props.value}, n.comment = {props.comment}, n.modifiedBy = {props.modifiedBy}, n.modifiedWhen = {props.modifiedWhen}, n.dataSource = {props.dataSource} ");
+		sb.append("return n");
+		return sb.toString();
 	}
 
 }

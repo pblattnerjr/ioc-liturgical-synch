@@ -9,7 +9,7 @@ import com.google.gson.JsonParser;
 
 import org.ocmc.ioc.liturgical.schemas.models.synch.AresPushTransaction;
 import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepo;
-import org.ocmc.ioc.liturgical.synch.git.GitUtils;
+import org.ocmc.ioc.liturgical.synch.git.JGitUtils;
 import org.ocmc.ioc.liturgical.synch.git.models.GitStatus;
 import org.ocmc.ioc.liturgical.synch.git.models.SynchData;
 import org.ocmc.ioc.liturgical.synch.managers.SynchManager;
@@ -59,7 +59,7 @@ public class SynchGitPushTask implements Runnable {
 	public void run() {
 		try {
 			if (synchManager.synchConnectionOK()) {
-				GitStatus status = GitUtils.updateAresGithubRepos(
+				GitStatus status = JGitUtils.updateAresGithubRepos(
 						synchManager.getGithubRepos()
 						, this.repoBase
 				);
@@ -75,9 +75,9 @@ public class SynchGitPushTask implements Runnable {
 							, true
 							);
 					for (AresPushTransaction ares : synchData.getTransactions()) {
-						// TODO: convert to a Neo transaction and send to the synch db
-						ares.setPrettyPrint(true);
-						System.out.println(ares.toJsonString());
+						synchManager.processAresPushTransaction(ares);
+//						ares.setPrettyPrint(true);
+//						System.out.println(ares.toJsonString());
 					}
 				}
 				// process the updates
@@ -87,9 +87,9 @@ public class SynchGitPushTask implements Runnable {
 							, true
 							);
 					for (AresPushTransaction ares : synchData.getTransactions()) {
-						// TODO: convert to a Neo transaction and send to the synch db
-						ares.setPrettyPrint(true);
-						System.out.println(ares.toJsonString());
+						synchManager.processAresPushTransaction(ares);
+//						ares.setPrettyPrint(true);
+//						System.out.println(ares.toJsonString());
 					}
 				}
 			} else {

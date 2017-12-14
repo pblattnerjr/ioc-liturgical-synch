@@ -16,7 +16,12 @@
   </properties>
 
 	<repositories>
-	    <repository>
+	 <repository>
+	      <id>egit</id>
+	      <name>Eclipse egit</name>
+	      <url>https://repo.eclipse.org/content/repositories/egit-releases/</url>
+	    </repository>
+	    	    <repository>
 	        <id>ioc-liturgical-schemas</id>
 	        <url>https://raw.github.com/OCMC-Translation-Projects/ioc-liturgical-schemas/mvn-repo/</url>
 	        <snapshots>
@@ -96,6 +101,12 @@
 		<dependency>
 		    <groupId>org.eclipse.jgit</groupId>
 		    <artifactId>org.eclipse.jgit</artifactId>
+		    <version>4.9.0.201710071750-r</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.eclipse.mylyn.github/org.eclipse.egit.github.core -->
+		<dependency>
+		    <groupId>org.eclipse.mylyn.github</groupId>
+		    <artifactId>org.eclipse.egit.github.core</artifactId>
 		    <version>4.9.0.201710071750-r</version>
 		</dependency>
 		<!-- tag::bolt-dependency[] -->

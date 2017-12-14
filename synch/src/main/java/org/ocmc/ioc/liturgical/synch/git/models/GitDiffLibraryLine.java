@@ -1,6 +1,7 @@
 package org.ocmc.ioc.liturgical.synch.git.models;
 
 public class GitDiffLibraryLine extends LibraryLine {
+	private String who = "";
 	private String renamedFromLibrary = "";
 	private String renamedFromTopic = "";
 	private String renamedFromKey = "";
@@ -83,6 +84,14 @@ public class GitDiffLibraryLine extends LibraryLine {
 
 	public void setTimestamp(String timestamp) {
 		this.timestamp = timestamp;
+	}
+
+	public String getWho() {
+		return who;
+	}
+
+	public void setWho(String who) {
+		this.who = who;
 	}
 
 }

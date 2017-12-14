@@ -11,7 +11,7 @@ import org.ocmc.ioc.liturgical.schemas.exceptions.BadIdException;
 import org.ocmc.ioc.liturgical.schemas.models.synch.AresPushTransaction;
 import org.ocmc.ioc.liturgical.schemas.models.synch.AresPushTransaction.TYPES;
 import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepo;
-import org.ocmc.ioc.liturgical.synch.git.GitUtils;
+import org.ocmc.ioc.liturgical.synch.git.JGitUtils;
 import org.ocmc.ioc.liturgical.synch.git.models.GitDiffEntry;
 import org.ocmc.ioc.liturgical.synch.git.models.GitDiffLibraryLine;
 import org.ocmc.ioc.liturgical.synch.git.models.SynchData;
@@ -48,11 +48,12 @@ public class SynchUtils {
 
 		List<GitDiffEntry> entries = null;
 		if (githubRepo.getLastSynchCommitId() == null || githubRepo.getLastSynchCommitId().length() == 0) {
-			entries = GitUtils.compareEmptyTree(githubRepo.lastFetchLocalPath);
+			entries = JGitUtils.compareEmptyTree(githubRepo.lastFetchLocalPath);
 		} else {
-			entries = GitUtils.compare(githubRepo.getLastFetchLocalPath(), githubRepo.getLastSynchCommitId());
+			entries = JGitUtils.compare(githubRepo.getLastFetchLocalPath(), githubRepo.getLastSynchCommitId());
 		}
 		for (GitDiffEntry entry : entries) {
+			String who = entry.getCommit().getAuthorIdent().getName();
 			for (String filename : entry.getDeletedFiles()) {
 				String [] parts = getAresFileParts(filename);
 				if (parts != null) {
@@ -72,6 +73,7 @@ public class SynchUtils {
 		    		switch (list.size()) {
 		    		case (1): {
 		    			GitDiffLibraryLine first = (GitDiffLibraryLine) list.get(0);
+		    			first.setWho(who);
 		    			if (first.isPlus()) {
 		    				if (first.hasRenamedKey()) {
 			    				renameMap.put(first.getKey(), first);
@@ -85,7 +87,9 @@ public class SynchUtils {
 		    		}
 		    		case (2): {
 		    			GitDiffLibraryLine first = (GitDiffLibraryLine) list.get(0);
+		    			first.setWho(who);
 		    			GitDiffLibraryLine second = (GitDiffLibraryLine) list.get(1);
+		    			second.setWho(who);
 		    			if (first.isPlus()) {
 		    				if (second.isPlus()) {
 			    				unknownMap.put(first.getKey(), first);
@@ -210,6 +214,7 @@ public class SynchUtils {
 					, macAddress
 					, line.getTimestamp() + GeneralUtils.padNumber("s", 4, counter)
 					);
+			trans.setRequestingUser(line.getWho());
 			trans.setFromLibrary(line.getRenamedFromLibrary().length() > 0 ? line.getRenamedFromLibrary() : line.getDomain());
 			trans.setFromTopic(line.getRenamedFromTopic().length() > 0 ? line.getRenamedFromTopic() : line.getTopic());
 			trans.setFromKey(line.getRenamedFromKey().length() > 0 ? line.getRenamedFromKey() : line.getKey());

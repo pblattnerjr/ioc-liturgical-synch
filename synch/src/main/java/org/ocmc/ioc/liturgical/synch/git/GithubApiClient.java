@@ -6,7 +6,9 @@ import java.util.List;
 import org.eclipse.egit.github.core.Commit;
 import org.eclipse.egit.github.core.Reference;
 import org.eclipse.egit.github.core.Repository;
+import org.eclipse.egit.github.core.RepositoryCommitCompare;
 import org.eclipse.egit.github.core.client.GitHubClient;
+import org.eclipse.egit.github.core.service.CommitService;
 import org.eclipse.egit.github.core.service.DataService;
 import org.eclipse.egit.github.core.service.RepositoryService;
 import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepo;
@@ -28,39 +30,52 @@ import org.slf4j.LoggerFactory;
  */
 public class GithubApiClient {
 	private static final Logger logger = LoggerFactory.getLogger(GithubApiClient.class);
-	private RepositoryService service = null;
+	private RepositoryService repoService = null;
 	private DataService dataService = null;
+	private CommitService commitService = null;
 	private GitHubClient client = new GitHubClient();
+	private String oldCommit = "722455bfbae840ec66c12709847b49f04cf238d0";
 
 	public GithubApiClient (
 			String oAuth
 			) {
 		GitHubClient client = new GitHubClient();
 		client.setOAuth2Token(oAuth);
-		service = new RepositoryService(client);
+		repoService = new RepositoryService(client);
 		dataService = new DataService(client);
+		commitService = new CommitService(client);
 	}
 
 	public void process(GithubRepositories repos) {
 		for (GithubRepo repo : repos.getRepos()) {
 			try {
-				  Repository repository = service.getRepository(
+				  Repository repository = repoService.getRepository(
 						  repo.getAccount()
 						  , repo.getName()
 						  );
-				  Reference master = dataService.getReference(repository, "heads/master");
-			      Commit baseCommit = dataService.getCommit(repository, master.getObject().getSha());
-			      System.out.println(repository.getName() + " " + baseCommit.getAuthor().getName() + " " + baseCommit.getAuthor().getDate() + " "+ baseCommit.getSha());
+			      RepositoryCommitCompare repoCompare = this.compare(repository, oldCommit);
 			} catch (Exception e) {
 				ErrorUtils.report(logger, e);
 			}
 		}
 	}
 	
+	public RepositoryCommitCompare compare(Repository repository, String baseCommit) {
+		RepositoryCommitCompare result = null;
+		try {
+			  Reference master = dataService.getReference(repository, "heads/master");
+			  Reference lastCommit = dataService.getReference(repository, baseCommit);
+		      RepositoryCommitCompare repoCompare = commitService.compare(repository, lastCommit.getObject().getSha(), master.getObject().getSha());
+		} catch (Exception e ) {
+			ErrorUtils.report(logger, e);
+		}
+		return result;
+	}
+	
 	public String getHeadCommitId(String account, String repoName) {
 		String result = "";
 		try {
-			  Repository repository = service.getRepository(account, repoName);
+			  Repository repository = repoService.getRepository(account, repoName);
 			  Reference master = dataService.getReference(repository, "heads/master");
 		      Commit baseCommit = dataService.getCommit(repository, master.getObject().getSha());			
 			  result = baseCommit.getSha();

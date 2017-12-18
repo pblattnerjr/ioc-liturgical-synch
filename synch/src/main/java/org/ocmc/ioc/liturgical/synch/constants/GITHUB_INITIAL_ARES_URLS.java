@@ -1,12 +1,8 @@
 package org.ocmc.ioc.liturgical.synch.constants;
 
-import org.apache.commons.io.FilenameUtils;
 import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepo;
 import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepositories;
-import org.ocmc.ioc.liturgical.synch.git.GithubApiClient;
 import org.ocmc.ioc.liturgical.utils.ErrorUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public enum GITHUB_INITIAL_ARES_URLS {
 	EN_UK_LASH("https://github.com/AGES-Initiatives/ages-alwb-library-lash.git")
@@ -49,9 +45,8 @@ public enum GITHUB_INITIAL_ARES_URLS {
 	public static GithubRepositories toPOJO() {
 		GithubRepositories repos = new GithubRepositories();
 		for (GITHUB_INITIAL_ARES_URLS item : GITHUB_INITIAL_ARES_URLS.values()) {
-			GithubRepo repo = new GithubRepo(item.url);
-			repo.setAccount(item.account);
-			repo.setName(item.repoName);
+			GithubRepo repo = new GithubRepo(item.account, item.repoName);
+			repo.setUrl(item.url);
 			repos.addRepo(repo);
 		}
 		return repos;

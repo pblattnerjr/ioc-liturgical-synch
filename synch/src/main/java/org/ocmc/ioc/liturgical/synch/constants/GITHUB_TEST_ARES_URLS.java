@@ -30,9 +30,8 @@ public enum GITHUB_TEST_ARES_URLS {
 	public static GithubRepositories toPOJO() {
 		GithubRepositories repos = new GithubRepositories();
 		for (GITHUB_TEST_ARES_URLS item : GITHUB_TEST_ARES_URLS.values()) {
-			GithubRepo repo = new GithubRepo(item.url);
-			repo.setAccount(item.account);
-			repo.setName(item.repoName);
+			GithubRepo repo = new GithubRepo(item.account, item.repoName);
+			repo.setUrl(item.url);
 			repos.addRepo(repo);
 		}
 		return repos;

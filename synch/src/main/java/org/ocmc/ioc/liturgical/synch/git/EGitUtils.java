@@ -28,15 +28,15 @@ import org.slf4j.LoggerFactory;
  * @author mac002
  *
  */
-public class GithubApiClient {
-	private static final Logger logger = LoggerFactory.getLogger(GithubApiClient.class);
+public class EGitUtils {
+	private static final Logger logger = LoggerFactory.getLogger(EGitUtils.class);
 	private RepositoryService repoService = null;
 	private DataService dataService = null;
 	private CommitService commitService = null;
 	private GitHubClient client = new GitHubClient();
 	private String oldCommit = "722455bfbae840ec66c12709847b49f04cf238d0";
 
-	public GithubApiClient (
+	public EGitUtils (
 			String oAuth
 			) {
 		GitHubClient client = new GitHubClient();

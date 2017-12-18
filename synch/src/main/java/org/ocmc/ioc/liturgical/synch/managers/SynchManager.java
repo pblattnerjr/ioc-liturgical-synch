@@ -1,6 +1,8 @@
 package org.ocmc.ioc.liturgical.synch.managers;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import org.neo4j.driver.v1.AuthTokens;
@@ -9,6 +11,7 @@ import org.neo4j.driver.v1.Config.ConfigBuilder;
 import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.GraphDatabase;
 import org.neo4j.driver.v1.StatementResult;
+import org.neo4j.driver.v1.summary.ResultSummary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,11 +25,13 @@ import org.ocmc.ioc.liturgical.schemas.constants.HTTP_RESPONSE_CODES;
 import org.ocmc.ioc.liturgical.schemas.constants.STATUS;
 import org.ocmc.ioc.liturgical.schemas.models.ws.response.RequestStatus;
 import org.ocmc.ioc.liturgical.schemas.models.ws.response.ResultJsonObjectArray;
+import org.ocmc.ioc.liturgical.synch.app.SynchServiceProvider;
 import org.ocmc.ioc.liturgical.synch.constants.Constants;
 import org.ocmc.ioc.liturgical.synch.exceptions.DbException;
 import org.ocmc.ioc.liturgical.schemas.models.ModelHelpers;
 import org.ocmc.ioc.liturgical.schemas.models.db.docs.ontology.TextLiturgical;
 import org.ocmc.ioc.liturgical.schemas.models.synch.AresPushTransaction;
+import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepo;
 import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepositories;
 import org.ocmc.ioc.liturgical.schemas.models.synch.Transaction;
 import org.ocmc.ioc.liturgical.utils.ErrorUtils;
@@ -45,12 +50,14 @@ public class SynchManager {
 	private static final String returnClause = "return properties(doc) order by doc.key";
 	private String synchDomain = "";
 	private String synchPort = "";
-	private boolean synchEnabled = false;
 	private String username = "";
 	private String password = "";
 	private Driver synchDriver = null;
-	private boolean synchConnectionOK = false;
 	private GithubRepositories githubRepos = new GithubRepositories();
+	private boolean synchEnabled = false;
+	private boolean synchConnectionOK = false;
+	private boolean useTestRepos = false;
+	private String synchInfoLabel = Constants.LABEL_GITHUB_REPO;
 	
 	public SynchManager(
 			  String synchDomain
@@ -109,6 +116,9 @@ public class SynchManager {
 					}
 				  tries++;
 			  }
+		  }
+		  if (! this.synchConnectionOK) {
+			  SynchServiceProvider.sendMessage("SynchManager cannot connect to synch database at " + this.synchDomain + ":" + this.synchPort);
 		  }
 	  }
 	  
@@ -212,6 +222,42 @@ public class SynchManager {
 		return result;
 	}
 
+	public RequestStatus deleteTestRepos() {
+		RequestStatus status = new RequestStatus();
+		try {
+			status = this.deleteWhereStartsWith(
+					Constants.GithubRepositoriesLibraryTopic
+					, Constants.LABEL_GITHUB_TEST_REPO
+					);
+		} catch (Exception e) {
+			ErrorUtils.report(logger, e);
+		}
+		return status;
+	}
+	
+	public RequestStatus deleteWhereStartsWith(String id, String label) throws DbException {
+		RequestStatus result = new RequestStatus();
+		int count = 0;
+		String query = 
+				"match (doc:%s) where doc.id starts with '%s' delete doc return count(doc)";
+		query = String.format(query, label, id);
+		try (org.neo4j.driver.v1.Session session = synchDriver.session()) {
+			StatementResult neoResult = session.run(query);
+			count = neoResult.consume().counters().nodesDeleted();
+			if (count > 0) {
+		    	result.setCode(HTTP_RESPONSE_CODES.OK.code);
+		    	result.setMessage(HTTP_RESPONSE_CODES.OK.message + ": deleted " + id);
+			} else {
+		    	result.setCode(HTTP_RESPONSE_CODES.NOT_FOUND.code);
+		    	result.setMessage(HTTP_RESPONSE_CODES.NOT_FOUND.message + " " + id);
+			}
+		} catch (Exception e){
+			result.setCode(HTTP_RESPONSE_CODES.BAD_REQUEST.code);
+			result.setMessage(HTTP_RESPONSE_CODES.BAD_REQUEST.message);
+			result.setDeveloperMessage(e.getMessage());
+		}
+		return result;
+	}
 
 	/**
 	 * Gets the transaction for the specified timestamp.
@@ -274,16 +320,22 @@ public class SynchManager {
 	}
 
 	public GithubRepositories getGithubSynchInfo() {
-		GithubRepositories repos = null;
+		GithubRepositories repos = new GithubRepositories();
 		ResultJsonObjectArray result = new ResultJsonObjectArray(false); // true means PrettyPrint the json
 		try {
 			StringBuffer sb = new StringBuffer();
-			sb.append("match (doc:GithubTransaction return properties(doc)"); 
-			String query = sb.toString();
+			String query = "match (doc:%s) where doc.id starts with '%s' return properties(doc)"; 
+			query = String.format(query, this.synchInfoLabel, Constants.GithubRepositoriesLibraryTopic);
 			result.setQuery(query);
 			result = getForQuery(query);
-			if (result.valueCount == 1) {
-				repos = gson.fromJson(result.getFirstObjectValueAsString(), GithubRepositories.class);
+			if (result.valueCount == 0) {
+				repos = this.githubRepos;
+				this.createGitSynchInfo(repos);
+			} else {
+				for (JsonObject value : result.getValues()) {
+					GithubRepo repo = gson.fromJson(value, GithubRepo.class);
+					repos.addRepo(repo);
+				}
 			}
 		} catch (Exception e) {
 			result.setStatusCode(HTTP_RESPONSE_CODES.BAD_REQUEST.code);
@@ -292,6 +344,11 @@ public class SynchManager {
 		}
 		return repos;
 	}
+	
+	public void initializeTestRepos() {
+		
+	}
+	
 	/**
 	 * Gets all transactions whose status = RELEASED and whose
 	 * timestamp is greater than or equal to the 'since' parameter
@@ -503,7 +560,8 @@ public class SynchManager {
 	 */
 	public StatementResult setIdConstraint(String label) {
 		StatementResult neoResult = null;
-		String query = "create constraint on (p:Transaction) assert p.id is unique"; 
+		String query = "create constraint on (p:%s) assert p.id is unique"; 
+		query = String.format(query, label);
 		try (org.neo4j.driver.v1.Session session = synchDriver.session()) {
 			neoResult = session.run(query);
 		} catch (Exception e) {
@@ -544,31 +602,74 @@ public class SynchManager {
 	public RequestStatus createGitSynchInfo(GithubRepositories doc) throws DbException {
 		RequestStatus result = new RequestStatus();
 		int count = 0;
-		setIdConstraint("GithubRepositories");
-		String query = "create (doc:GithubRepositories) set doc = {props} return doc";
-		try (org.neo4j.driver.v1.Session session = this.synchDriver.session()) {
-			Map<String,Object> props = ModelHelpers.getAsPropertiesMap(doc);
-			StatementResult neoResult = session.run(query, props);
-			count = neoResult.consume().counters().nodesCreated();
-			if (count > 0) {
-		    	result.setCode(HTTP_RESPONSE_CODES.CREATED.code);
-		    	result.setMessage(HTTP_RESPONSE_CODES.CREATED.message);
-			} else {
-		    	result.setCode(HTTP_RESPONSE_CODES.BAD_REQUEST.code);
-		    	result.setMessage(HTTP_RESPONSE_CODES.BAD_REQUEST.message);
+		logger.info("Creating GitSynchInfo for respositories");
+		setIdConstraint(this.synchInfoLabel);
+		String query = "create (doc:%s) set doc = {props} return doc";
+		query = String.format(query, this.synchInfoLabel);
+		for (GithubRepo repo : doc.getRepos()) {
+			ResultSummary summary = null;
+			try (org.neo4j.driver.v1.Session session = this.synchDriver.session()) {
+				Map<String,Object> props = ModelHelpers.getAsPropertiesMap(repo);
+				StatementResult neoResult = session.run(query, props);
+				summary = neoResult.summary();
+				count = summary.counters().nodesCreated();
+				if (count > 0) {
+			    	result.setCode(HTTP_RESPONSE_CODES.CREATED.code);
+			    	result.setMessage(HTTP_RESPONSE_CODES.CREATED.message);
+				} else {
+			    	result.setCode(HTTP_RESPONSE_CODES.BAD_REQUEST.code);
+			    	result.setMessage(summary.notifications().toString());
+				}
+			} catch (Exception e){
+				if (e.getMessage().contains("already exists")) {
+					result.setCode(HTTP_RESPONSE_CODES.CONFLICT.code);
+					result.setDeveloperMessage(HTTP_RESPONSE_CODES.CONFLICT.message);
+				} else {
+					result.setCode(HTTP_RESPONSE_CODES.BAD_REQUEST.code);
+					result.setDeveloperMessage(e.getMessage());
+				}
+				result.setUserMessage(e.getMessage());
 			}
-		} catch (Exception e){
-			if (e.getMessage().contains("already exists")) {
-				result.setCode(HTTP_RESPONSE_CODES.CONFLICT.code);
-				result.setDeveloperMessage(HTTP_RESPONSE_CODES.CONFLICT.message);
-			} else {
-				result.setCode(HTTP_RESPONSE_CODES.BAD_REQUEST.code);
-				result.setDeveloperMessage(HTTP_RESPONSE_CODES.BAD_REQUEST.message);
-			}
-			result.setUserMessage(e.getMessage());
 		}
 		return result;
-}
+	}
+
+		public RequestStatus updateGitSynchInfo(GithubRepositories doc) throws DbException {
+			RequestStatus result = new RequestStatus();
+			for (GithubRepo repo : doc.getRepos()) {
+				result = updateGitRepoSynchInfo(repo);
+			}
+			return result;
+	}
+
+		public RequestStatus updateGitRepoSynchInfo(GithubRepo repo) throws DbException {
+			RequestStatus result = new RequestStatus();
+			int count = 0;
+			String query = "match (doc:%s) where doc.id = '%s' set doc = {props} return doc";
+			query = String.format(query, this.synchInfoLabel, repo.getId());
+			try (org.neo4j.driver.v1.Session session = this.synchDriver.session()) {
+				Map<String,Object> props = ModelHelpers.getAsPropertiesMap(repo);
+				StatementResult neoResult = session.run(query, props);
+				count = neoResult.consume().counters().propertiesSet();
+				if (count > 0) {
+			    	result.setCode(HTTP_RESPONSE_CODES.OK.code);
+			    	result.setMessage(HTTP_RESPONSE_CODES.OK.message);
+				} else {
+			    	result.setCode(HTTP_RESPONSE_CODES.BAD_REQUEST.code);
+			    	result.setMessage(HTTP_RESPONSE_CODES.BAD_REQUEST.message);
+				}
+			} catch (Exception e){
+				if (e.getMessage().contains("already exists")) {
+					result.setCode(HTTP_RESPONSE_CODES.CONFLICT.code);
+					result.setDeveloperMessage(HTTP_RESPONSE_CODES.CONFLICT.message);
+				} else {
+					result.setCode(HTTP_RESPONSE_CODES.BAD_REQUEST.code);
+					result.setDeveloperMessage(HTTP_RESPONSE_CODES.BAD_REQUEST.message);
+				}
+				result.setUserMessage(e.getMessage());
+			}
+			return result;
+	}
 
 	public GithubRepositories getGithubRepos() {
 		return githubRepos;
@@ -584,6 +685,7 @@ public class SynchManager {
 			logger.info("Github Repos Synch Info:\n" + this.githubRepos.toJsonString());
 		}
 	}
+
 
 	/**
 	 * This method will create a Transaction from the AresPushTransaction
@@ -665,6 +767,68 @@ public class SynchManager {
 		sb.append("ON MATCH SET n.value = {props.value}, n.comment = {props.comment}, n.modifiedBy = {props.modifiedBy}, n.modifiedWhen = {props.modifiedWhen}, n.dataSource = {props.dataSource} ");
 		sb.append("return n");
 		return sb.toString();
+	}
+
+	public String getSynchDomain() {
+		return synchDomain;
+	}
+
+	public void setSynchDomain(String synchDomain) {
+		this.synchDomain = synchDomain;
+	}
+
+	public String getSynchPort() {
+		return synchPort;
+	}
+
+	public void setSynchPort(String synchPort) {
+		this.synchPort = synchPort;
+	}
+
+	public Driver getSynchDriver() {
+		return synchDriver;
+	}
+
+	public void setSynchDriver(Driver synchDriver) {
+		this.synchDriver = synchDriver;
+	}
+
+	public boolean isSynchEnabled() {
+		return synchEnabled;
+	}
+
+	public void setSynchEnabled(boolean synchEnabled) {
+		this.synchEnabled = synchEnabled;
+	}
+
+	public boolean isSynchConnectionOK() {
+		return synchConnectionOK;
+	}
+
+	public void setSynchConnectionOK(boolean synchConnectionOK) {
+		this.synchConnectionOK = synchConnectionOK;
+	}
+
+	public boolean isUseTestRepos() {
+		return useTestRepos;
+	}
+
+	public void setUseTestRepos(boolean useTestRepos) {
+		this.useTestRepos = useTestRepos;
+		if (useTestRepos) {
+			this.synchInfoLabel = Constants.LABEL_GITHUB_TEST_REPO;
+		} else {
+			this.synchInfoLabel = Constants.LABEL_GITHUB_REPO;
+		}
+	}
+
+	public String getSynchInfoLabel() {
+		return synchInfoLabel;
+	}
+
+	public void setSynchInfoLabel(String synchInfoLabel) {
+		this.synchInfoLabel = synchInfoLabel;
+		this.useTestRepos = synchInfoLabel.equals(Constants.LABEL_GITHUB_TEST_REPO);
 	}
 
 }

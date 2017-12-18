@@ -16,5 +16,12 @@ public class Constants {
 	public static final String ALT_ID_DELIMITER = "~"; // TODO reconcile pipe vs tilde
 	public static final String DOMAIN_DELIMITER = "_";
 	public static final String DOMAIN_SPLITTER = "_";
-
+	
+	public static final String LABEL_GITHUB_REPO = "GithubRepo";
+	public static final String LABEL_GITHUB_TEST_REPO = "GithubTestRepo";
+	
+	public static final String GithubRepositoriesLibraryTopic = 	
+			Constants.LIBRARY_SYNCH
+			+ "~" +  org.ocmc.ioc.liturgical.schemas.constants.Constants.GITHUB
+			+ "~" ;
 }

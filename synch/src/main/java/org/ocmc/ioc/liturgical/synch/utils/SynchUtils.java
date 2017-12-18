@@ -16,14 +16,17 @@ import org.ocmc.ioc.liturgical.synch.git.models.GitDiffEntry;
 import org.ocmc.ioc.liturgical.synch.git.models.GitDiffLibraryLine;
 import org.ocmc.ioc.liturgical.synch.git.models.SynchData;
 import org.ocmc.ioc.liturgical.synch.git.models.SynchStatus;
+import org.ocmc.ioc.liturgical.synch.git.models.github.CommitFileChanged;
+import org.ocmc.ioc.liturgical.synch.git.models.github.CommitFileRenamed;
 import org.ocmc.ioc.liturgical.utils.ErrorUtils;
 import org.ocmc.ioc.liturgical.utils.GeneralUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 public class SynchUtils {
 	private static final Logger logger = LoggerFactory.getLogger(SynchUtils.class);
+	private static final 	String hostName = GeneralUtils.getHostName();
+	private static final String macAddress = GeneralUtils.getMacAddress();
 
 	/**
 	 * 
@@ -270,6 +273,127 @@ public class SynchUtils {
 	private static String[] getAresFileParts(String file) {
 		return getAresFileParts(file, "_", false, true);
 	}
+	
+	public static List<AresPushTransaction> handleCommitFileAdded(
+			String[] filenameFromParts
+			, String [] filenameToParts
+			, CommitFileChanged commitFile
+			, String committerName
+			, String committerDate
+			) {
+		List<AresPushTransaction> result = new ArrayList<AresPushTransaction>();
+		List<GitDiffLibraryLine> gitDiffLibraryLines = processPatch(
+				filenameFromParts[1]
+				, filenameFromParts[0]
+				, filenameToParts[1]
+				, filenameToParts[0]
+				, commitFile.getPatch()
+				, committerName
+				, committerDate
+				);
+		
+		int counter = 0;
+		for (GitDiffLibraryLine line : gitDiffLibraryLines) {
+			counter++;
+			AresPushTransaction ares = getAresPushTransaction(
+					line
+					, hostName
+					, macAddress
+					, TYPES.ADD_KEY_VALUE
+					, counter
+					);
+			result.add(ares);
+		}
+		return result;
+	}
+
+	public static List<AresPushTransaction> handleCommitFileModified(
+			String[] filenameFromParts
+			, String [] filenameToParts
+			, CommitFileChanged commitFile
+			, String committerName
+			, String committerDate
+			) {
+		List<AresPushTransaction> result = new ArrayList<AresPushTransaction>();
+		return result;
+	}
+
+	public static List<AresPushTransaction> handleCommitFileRemoved(
+			String[] filenameFromParts
+			, String [] filenameToParts
+			, CommitFileChanged commitFile
+			, String committerName
+			, String committerDate
+			) {
+		List<AresPushTransaction> result = new ArrayList<AresPushTransaction>();
+		return result;
+	}
+
+	public static List<AresPushTransaction> handleCommitFileRenamed(
+			String[] filenameFromParts
+			, String [] filenameToParts
+			, CommitFileRenamed commitFile
+			, String committerName
+			, String committerDate
+			) {
+		List<AresPushTransaction> result = new ArrayList<AresPushTransaction>();
+		return result;
+	}
+
+	public static List<GitDiffLibraryLine> processPatch(
+			String oldLibrary
+			, String oldTopic
+			, String newLibrary
+			, String newTopic
+			, String patch
+			, String committerName
+			, String committerDate
+			) {
+		String [] diffEntries = patch.split("\n");
+		List<GitDiffLibraryLine> result = new ArrayList<GitDiffLibraryLine>();
+		int count = 0;
+		for (String diff : diffEntries) {
+			count++;
+			String line = "";
+			GitDiffLibraryLine libLine = null;
+			if (diff.length() > 1 && (diff.startsWith("+") || diff.startsWith("-"))) {
+				if (diff.startsWith("+A_Resource_Whose_Name =") || diff.startsWith("-A_Resource_Whose_Name =")) {
+					// ignore
+				} else {
+					line = diff.substring(1);
+					try {
+						libLine = new GitDiffLibraryLine(Integer.toString(count),line);
+						libLine.setTimestamp(committerDate);
+						libLine.setWho(committerName);
+						libLine.setPlus(diff.startsWith("+"));
+						if (libLine.hasCommentAfterValue) {
+							if (libLine.getComment().contains("~")) {
+								String [] parts = libLine.getComment().split("~");
+								if (parts.length > 1) {
+									libLine.setRenameKeyFrom(parts[1]);
+								}
+							}
+						}
+						if (libLine.isPlus()) {
+							libLine.setDomain(newLibrary.toLowerCase());
+							libLine.setTopic(newTopic);
+						} else {
+							libLine.setDomain(oldLibrary.toLowerCase());
+							libLine.setTopic(oldTopic);
+						}
+					} catch (Exception e) {
+						ErrorUtils.report(logger, e);
+						libLine = null;
+					}
+				}
+				if (libLine != null) {
+					result.add(libLine);
+				}
+			}
+		}
+		return result;
+	}
+
 
 
 }

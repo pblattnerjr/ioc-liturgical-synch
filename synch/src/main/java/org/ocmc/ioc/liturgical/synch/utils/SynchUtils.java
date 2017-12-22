@@ -218,9 +218,9 @@ public class SynchUtils {
 					, line.getTimestamp() + GeneralUtils.padNumber("s", 4, counter)
 					);
 			trans.setRequestingUser(line.getWho());
-			trans.setFromLibrary(line.getRenamedFromLibrary().length() > 0 ? line.getRenamedFromLibrary() : line.getDomain());
-			trans.setFromTopic(line.getRenamedFromTopic().length() > 0 ? line.getRenamedFromTopic() : line.getTopic());
-			trans.setFromKey(line.getRenamedFromKey().length() > 0 ? line.getRenamedFromKey() : line.getKey());
+			trans.setFromLibrary(line.getFromLibrary());
+			trans.setFromTopic(line.getFromTopic());
+			trans.setFromKey(line.getFromKey());
 			trans.setToLibrary(line.getDomain());
 			trans.setToKey(line.getKey());
 			trans.setToTopic(line.getTopic());
@@ -315,6 +315,32 @@ public class SynchUtils {
 			, String committerDate
 			) {
 		List<AresPushTransaction> result = new ArrayList<AresPushTransaction>();
+		List<GitDiffLibraryLine> gitDiffLibraryLines = processPatch(
+				filenameFromParts[1]
+				, filenameFromParts[0]
+				, filenameToParts[1]
+				, filenameToParts[0]
+				, commitFile.getPatch()
+				, committerName
+				, committerDate
+				);
+		
+		int counter = 0;
+		for (GitDiffLibraryLine line : gitDiffLibraryLines) {
+			counter++;
+			TYPES type = TYPES.CHANGE_OF_VALUE;
+			if (! line.getKey().equals(line.getFromKey())) {
+				type = TYPES.CHANGE_OF_KEY;
+			}
+			AresPushTransaction ares = getAresPushTransaction(
+					line
+					, hostName
+					, macAddress
+					, type
+					, counter
+					);
+			result.add(ares);
+		}
 		return result;
 	}
 
@@ -349,6 +375,7 @@ public class SynchUtils {
 			, String committerName
 			, String committerDate
 			) {
+		System.out.println(patch);
 		String [] diffEntries = patch.split("\n");
 		List<GitDiffLibraryLine> result = new ArrayList<GitDiffLibraryLine>();
 		int count = 0;

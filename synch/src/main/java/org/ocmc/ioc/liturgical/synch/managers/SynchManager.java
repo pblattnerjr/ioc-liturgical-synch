@@ -22,6 +22,7 @@ import com.google.gson.JsonParser;
 
 import org.ocmc.ioc.liturgical.schemas.constants.DATA_SOURCES;
 import org.ocmc.ioc.liturgical.schemas.constants.HTTP_RESPONSE_CODES;
+import org.ocmc.ioc.liturgical.schemas.constants.RELATIONSHIP_TYPES;
 import org.ocmc.ioc.liturgical.schemas.constants.STATUS;
 import org.ocmc.ioc.liturgical.schemas.models.ws.response.RequestStatus;
 import org.ocmc.ioc.liturgical.schemas.models.ws.response.ResultJsonObjectArray;
@@ -34,6 +35,7 @@ import org.ocmc.ioc.liturgical.schemas.models.synch.AresPushTransaction;
 import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepo;
 import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepositories;
 import org.ocmc.ioc.liturgical.schemas.models.synch.Transaction;
+import org.ocmc.ioc.liturgical.utils.CypherUtils;
 import org.ocmc.ioc.liturgical.utils.ErrorUtils;
 
 /**
@@ -45,6 +47,7 @@ import org.ocmc.ioc.liturgical.utils.ErrorUtils;
  */
 public class SynchManager {
 	private static final Logger logger = LoggerFactory.getLogger(SynchManager.class);
+	private static final String DELETED_LABEL_PREFIX = org.ocmc.ioc.liturgical.schemas.constants.Constants.DELETED_LABEL_PREFIX;
 	private Gson gson = new GsonBuilder().disableHtmlEscaping().create();
 	private JsonParser parser = new JsonParser();
 	private static final String returnClause = "return properties(doc) order by doc.key";
@@ -58,6 +61,7 @@ public class SynchManager {
 	private boolean synchConnectionOK = false;
 	private boolean useTestRepos = false;
 	private String synchInfoLabel = Constants.LABEL_GITHUB_REPO;
+	private String synchTransLabel = Constants.LABEL_SYNCH_TRANS;
 	
 	public SynchManager(
 			  String synchDomain
@@ -172,6 +176,7 @@ public class SynchManager {
 	 * the parameter 'since'.  The results are ordered ascending based
 	 * on the timestamp.  So, the last value in the results array will be
 	 * the most recent transaction.
+	 * @param requestor person making the request
 	 * @param since the time
 	 * @return transactions whose timestamp is greater than or equal to the parameter 'since'
 	 */
@@ -182,7 +187,9 @@ public class SynchManager {
 		ResultJsonObjectArray result = new ResultJsonObjectArray(false); // true means PrettyPrint the json
 		try {
 			StringBuffer sb = new StringBuffer();
-			sb.append("match (doc:Transaction) where doc.key > '");
+			sb.append("match (doc:");
+			sb.append(this.synchTransLabel);
+			sb.append(") where doc.key > '");
 			sb.append(since);
 			sb.append("' ");
 			sb.append(returnClause);
@@ -200,12 +207,14 @@ public class SynchManager {
 	public RequestStatus deleteTransaction(String id) throws DbException {
 		RequestStatus result = new RequestStatus();
 		int count = 0;
-		String query = 
-				"match (doc:Transaction) where doc.id = \"" 
-				+ id 
-		        + "\" delete doc return count(doc)";
+		StringBuffer sb = new StringBuffer();
+		sb.append("match (doc:");
+		sb.append(this.synchTransLabel);
+		sb.append(") where doc.id = '");
+		sb.append(id);
+		sb.append("' delete doc return count(doc)");
 		try (org.neo4j.driver.v1.Session session = synchDriver.session()) {
-			StatementResult neoResult = session.run(query);
+			StatementResult neoResult = session.run(sb.toString());
 			count = neoResult.consume().counters().nodesDeleted();
 			if (count > 0) {
 		    	result.setCode(HTTP_RESPONSE_CODES.OK.code);
@@ -272,7 +281,9 @@ public class SynchManager {
 		ResultJsonObjectArray result = new ResultJsonObjectArray(false); // true means PrettyPrint the json
 		try {
 			StringBuffer sb = new StringBuffer();
-			sb.append("match (doc:Transaction) where doc.key = '");
+			sb.append("match (doc:");
+			sb.append(this.synchTransLabel);
+			sb.append(") where doc.key = '");
 			sb.append(timestamp);
 			sb.append("' ");
 			sb.append(" return properties(doc)");
@@ -292,6 +303,8 @@ public class SynchManager {
 	 * the parameter 'since'.  The results are ordered ascending based
 	 * on the timestamp.  So, the last value in the results array will be
 	 * the most recent transaction.
+	 * @param requestor person making the request
+	 * @param library library to use
 	 * @param since when
 	 * @return transactions whose timestamp is greater than or equal to the parameter 'since'.
 	 */
@@ -303,7 +316,9 @@ public class SynchManager {
 		ResultJsonObjectArray result = new ResultJsonObjectArray(false); // true means PrettyPrint the json
 		try {
 			StringBuffer sb = new StringBuffer();
-			sb.append("match (doc:Transaction) where doc.key > '");
+			sb.append("match (doc:");
+			sb.append(this.synchTransLabel);
+			sb.append(") where doc.key > '");
 			sb.append(since);
 			sb.append("'" );
 			sb.append(this.andLibrary(library));
@@ -352,6 +367,7 @@ public class SynchManager {
 	/**
 	 * Gets all transactions whose status = RELEASED and whose
 	 * timestamp is greater than or equal to the 'since' parameter
+	 * @param requestor person making the request
 	 * @param since when
 	 * @return matching transactions
 	 */
@@ -362,7 +378,9 @@ public class SynchManager {
 		ResultJsonObjectArray result = new ResultJsonObjectArray(false); // true means PrettyPrint the json
 		try {
 			StringBuffer sb = new StringBuffer();
-			sb.append("match (doc:Transaction) where doc.key > '");
+			sb.append("match (doc:");
+			sb.append(this.synchTransLabel);
+			sb.append(") where doc.key > '");
 			sb.append(since);
 			sb.append("' ");
 			sb.append("and doc.status = '");
@@ -383,6 +401,8 @@ public class SynchManager {
 	/**
 	 * Gets all transactions whose status = RELEASED and whose
 	 * timestamp is greater than or equal to the 'since' parameter
+	 * @param requestor person making the request
+	 * @param library the library
 	 * @param since when
 	 * @return matching transactions
 	 */
@@ -394,7 +414,9 @@ public class SynchManager {
 		ResultJsonObjectArray result = new ResultJsonObjectArray(false); // true means PrettyPrint the json
 		try {
 			StringBuffer sb = new StringBuffer();
-			sb.append("match (doc:Transaction) where doc.key > '");
+			sb.append("match (doc:");
+			sb.append(this.synchTransLabel);
+			sb.append(") where doc.key > '");
 			sb.append(since);
 			sb.append("' and doc.status = '");
 			sb.append(STATUS.RELEASED.keyname);
@@ -414,13 +436,16 @@ public class SynchManager {
 
 	/**
 	 * Returns the most recent transaction
+	 * @param requestor person making the request
 	 * @return the most recent transaction
 	 */
 	public ResultJsonObjectArray getMostRecentTransaction(String requestor) {
 		ResultJsonObjectArray result = new ResultJsonObjectArray(false); // true means PrettyPrint the json
 		try {
 			StringBuffer sb = new StringBuffer();
-			sb.append("match (doc:Transaction  ");
+			sb.append("match (doc:");
+			sb.append(this.synchTransLabel);
+			sb.append(")");
 			sb.append(returnClause);
 			sb.append(" descending limit 1");
 			String query = sb.toString();
@@ -436,6 +461,8 @@ public class SynchManager {
 
 	/**
 	 * Returns the most recent transaction for the specified library
+	 * @param requestor person making the request
+	 * @param library whose transaction is wanted
 	 * @return the most recent transaction for the specified library
 	 */
 	public ResultJsonObjectArray getMostRecentTransactionForLibrary(
@@ -445,7 +472,9 @@ public class SynchManager {
 		ResultJsonObjectArray result = new ResultJsonObjectArray(false); // true means PrettyPrint the json
 		try {
 			StringBuffer sb = new StringBuffer();
-			sb.append("match (doc:Transaction  ");
+			sb.append("match (doc:");
+			sb.append(this.synchTransLabel);
+			sb.append(")");
 			sb.append(whereLibrary(library));
 			sb.append(returnClause);
 			sb.append(" descending limit 1");
@@ -462,6 +491,7 @@ public class SynchManager {
 
 	/**
 	 * Returns the most recent transaction for the specified Id
+	 * @param requestor person making the request
 	 * @param id - the Id of a doc.  This is stored in the transaction as its topic.
 	 * @return the most recent transaction for the specified Id
 	 */
@@ -472,7 +502,9 @@ public class SynchManager {
 		ResultJsonObjectArray result = new ResultJsonObjectArray(false); // true means PrettyPrint the json
 		try {
 			StringBuffer sb = new StringBuffer();
-			sb.append("match (doc:Transaction  ");
+			sb.append("match (doc:");
+			sb.append(this.synchTransLabel);
+			sb.append(")  ");
 			sb.append(this.whereTopicIsId(id));
 			sb.append("' ");
 			sb.append(returnClause);
@@ -495,7 +527,9 @@ public class SynchManager {
 		ResultJsonObjectArray result = new ResultJsonObjectArray(false); // true means PrettyPrint the json
 		try {
 			StringBuffer sb = new StringBuffer();
-			sb.append("match (doc:Transaction)  ");
+			sb.append("match (doc:");
+			sb.append(this.synchTransLabel);
+			sb.append(")  ");
 			sb.append(this.whereTopicIsId(id));
 			sb.append(returnClause);
 			sb.append(" ascending");
@@ -570,14 +604,31 @@ public class SynchManager {
 		return neoResult;
 	}
 
+	public RequestStatus recordTransactions (List<Transaction> list) {
+		RequestStatus result = new RequestStatus();
+		try {
+			for (Transaction trans : list) {
+				 result = this.recordTransaction(trans);
+			}
+		} catch (Exception e) {
+			ErrorUtils.report(logger, e);
+		}
+		return result;
+	}
+
 	public RequestStatus recordTransaction(Transaction doc) throws DbException {
 			RequestStatus result = new RequestStatus();
 			int count = 0;
-			setIdConstraint("Transaction");
-			String query = "create (doc:Transaction) set doc = {props} return doc";
+			StringBuffer sb = new StringBuffer();
+
+
+			setIdConstraint(this.synchTransLabel);
+			sb.append("create (doc:");
+			sb.append(this.synchTransLabel);
+			sb.append(") set doc = {props} return doc");
 			try (org.neo4j.driver.v1.Session session = this.synchDriver.session()) {
 				Map<String,Object> props = ModelHelpers.getAsPropertiesMap(doc);
-				StatementResult neoResult = session.run(query, props);
+				StatementResult neoResult = session.run(sb.toString(), props);
 				count = neoResult.consume().counters().nodesCreated();
 				if (count > 0) {
 			    	result.setCode(HTTP_RESPONSE_CODES.CREATED.code);
@@ -713,39 +764,52 @@ public class SynchManager {
 			doc.setModifiedBy(ares.getRequestingUser());
 			doc.setModifiedWhen(doc.getCreatedWhen());
 			doc.setDataSource(DATA_SOURCES.GITHUB);
+			List<String> queries = new ArrayList<String>();
 
 			switch (ares.type) {
 			case ADD_KEY_VALUE:
 				query = this.createMergeNodeQuery(doc);
+				queries.add(query);
 				break;
 			case CHANGE_OF_KEY:
+				queries.addAll(this.createRenameKeyQueries(doc));
 				break;
 			case CHANGE_OF_LIBRARY:
+				// handled via createLibraryTopicRenameTransactions
 				break;
 			case CHANGE_OF_TOPIC:
+				// handled via createLibraryTopicRenameTransactions
 				break;
 			case CHANGE_OF_VALUE: // treat same as ADD_KEY_VALUE
 				query = this.createMergeNodeQuery(doc);
+				queries.add(query);
 				break;
 			case DELETE_KEY_VALUE:
-				// match id and delete node, relationships, and related docs !!! danger !!!
+				// TODO: soft delete of relationships and linked nodes
+				queries.addAll(this.createDeleteKeyValueQueries(doc));
 				break;
-			case DELETE_TOPIC:
-				// match library~topic and delete all nodes, relationships, and related docs !!! danger !!!
+			case DELETE_TOPIC: // should appear as DELETE_KEY_VALUE instead
+				logger.error("DELETE TOPIC - unexpected ares transaction: " + ares.toJsonString());
 				break;
-			case UNKNOWN: // fall through to default
+			case UNKNOWN: // fall through
 			default:
-				logger.error("unknown ares transaction:" + ares.toJsonString());
+				logger.error("unknown ares transaction: " + ares.toJsonString());
 				break;
-			
 			}
-			if (query != null) {
-				Transaction transaction = new Transaction(
-						query
-						, doc
-						, ares.requestingServer
-				);
-				recordTransaction(transaction);
+			if (queries.size() > 0) {
+				for (String theQuery : queries) {
+					Transaction transaction = new Transaction(
+							theQuery
+							, doc
+							, ares.requestingServer
+					);
+					transaction.setFromAres(true);
+					transaction.setRequestingMac(ares.requestingMac);
+					transaction.setPrettyPrint(true);
+					System.out.println(transaction.toJsonString());
+					// TODO: uncomment next line
+	//				recordTransaction(transaction);
+				}
 			}
 		} catch (Exception e) {
 			ErrorUtils.report(logger, e);
@@ -754,6 +818,38 @@ public class SynchManager {
 		return status;
 	}
 	
+	/**
+	 * Rather than actually delete a doc, we will rename all its labels by
+	 * prefixing them with DELETED_
+	 * @param doc the doc for which to create the queries
+	 * @return list of queries to rename each label for this doc to one that has DELETE_ as its prefix
+	 */
+	private List<String> createDeleteKeyValueQueries(TextLiturgical doc) {
+		List<String> result = new ArrayList<String>();
+		for (String label : doc.fetchOntologyLabelsList()) {
+			StringBuffer sb = new StringBuffer();
+			sb.append("match (n:Root) where n.id = '");
+			sb.append(doc.getId());
+			sb.append("' ");
+			sb.append(
+					CypherUtils.getLabelRenameClause(
+							"n"
+							, label
+							, DELETED_LABEL_PREFIX + label
+							)
+					);
+			result.add(sb.toString());
+		}
+		// now add the queries to rename the relationships
+		result.addAll(this.createLiturgicalRelationshipDeleteQueries(doc.getId()));
+		return result;
+	}
+
+	private List<String> createRenameKeyQueries(TextLiturgical doc) {
+		List<String> result = new ArrayList<String>();
+		return result;
+	}
+
 	private String createMergeNodeQuery(
 			TextLiturgical doc
 			) {
@@ -767,6 +863,122 @@ public class SynchManager {
 		sb.append("ON MATCH SET n.value = {props.value}, n.comment = {props.comment}, n.modifiedBy = {props.modifiedBy}, n.modifiedWhen = {props.modifiedWhen}, n.dataSource = {props.dataSource} ");
 		sb.append("return n");
 		return sb.toString();
+	}
+	
+	/**
+	 * An ID has three parts: library~topic~key.
+	 * Sometimes the value of library or topic or key
+	 * is another node's ID.  In such a case, the library
+	 * or topic or key is termed 'complex'.
+	 * 
+	 * This method creates a transaction to cover each of four cases:
+	 * 1. The ID parts are all simple.
+	 * 2. The library part is complex.
+	 * 3. The topic part is complex.
+	 * 4. The key part is complex.
+	 * 
+	 * We do not know whether all four cases are needed, but we
+	 * will create and eventually execute them just in case...
+	 * 
+	 * @param fromLibrary library from
+	 * @param fromTopic topic from
+	 * @param toLibrary library to
+	 * @param toTopic topic to
+	 * @param committerName name of the committer
+	 */
+	public void createLibraryTopicRenameTransactions(
+			String fromLibrary
+			, String fromTopic
+			, String toLibrary
+			, String toTopic
+			, String committerName
+			) {
+		String combinedFrom = "";
+		String combinedTo = "";
+		try {
+			String query = "";
+			if (fromTopic.equals(toTopic)) { // only the library changed
+				// create a transaction for when the ID is not complex
+				query = CypherUtils.getQueryToGloballyReplaceLibrary(fromLibrary, toLibrary);
+				combinedFrom = fromLibrary + "~";
+				combinedTo = toLibrary + "~";
+			} else {
+				// create a transaction for when the ID is not complex
+				query = CypherUtils.getQueryToReplaceLibraryAndTopic(
+						fromLibrary
+						, toLibrary
+						, fromTopic
+						, toTopic
+						);
+				combinedFrom = fromLibrary + "~" + fromTopic + "~" ;
+				combinedTo = toLibrary + "~" + toTopic + "~" ;
+			}
+			Transaction trans = new Transaction(
+					query
+					, committerName
+					);
+			trans.setFromAres(true);
+			this.recordTransaction(trans);
+			// create a transaction for when the library is complex
+			String complexLibrary = CypherUtils.getQueryToGloballyReplaceLibrary(
+					combinedFrom
+					, combinedTo
+					);
+			trans = new Transaction(
+					complexLibrary
+					, committerName
+					);
+			trans.setFromAres(true);
+			this.recordTransaction(trans);
+			// create a transaction for when the topic is complex
+			String complexTopic = CypherUtils.getQueryToGloballyReplaceTopic(
+					combinedFrom
+					, combinedTo
+					);
+			trans = new Transaction(
+					complexTopic
+					, committerName
+					);
+			trans.setFromAres(true);
+			this.recordTransaction(trans);
+			// create a transaction for when the key is complex
+			String complexKey = CypherUtils.getQueryToGloballyReplaceKey(
+					combinedFrom
+					, combinedTo
+					);
+			trans = new Transaction(
+					complexKey
+					, committerName
+					);
+			trans.setFromAres(true);
+			this.recordTransaction(trans);
+		} catch (Exception e) {
+			ErrorUtils.report(logger, e);
+		}
+	}
+	
+	/**
+	 * When a Liturgical doc is deleted, we do a 'soft delete' by simply
+	 * renaming its labels.  But, a liturgical doc can also have relationships
+	 * to other docs.  So, we need to do a 'soft delete' of the relationships.
+	 * A soft delete renames the relationship type by prefixing the DELETED_LABEL_PREFIX.
+	 * @param docId the id of the Liturgical doc
+	 * @return a list of queries to be run to soft delete the relationships to the doc
+	 */
+	public List<String> createLiturgicalRelationshipDeleteQueries(
+			String docId
+			) {
+		List<String> result = new ArrayList<String>();
+		for (RELATIONSHIP_TYPES type : org.ocmc.ioc.liturgical.schemas.constants.RELATIONSHIP_TYPES.filterByLiturgicalRelations()) {
+			String query = CypherUtils.getQueryToRenameRelationshipType(
+					org.ocmc.ioc.liturgical.schemas.constants.TOPICS.TEXT_LITURGICAL.label
+					, docId
+					, type.name()
+					, DELETED_LABEL_PREFIX + type.name()
+					);
+			result.add(query);
+		}
+		return result;
 	}
 
 	public String getSynchDomain() {
@@ -817,8 +1029,10 @@ public class SynchManager {
 		this.useTestRepos = useTestRepos;
 		if (useTestRepos) {
 			this.synchInfoLabel = Constants.LABEL_GITHUB_TEST_REPO;
+			this.synchTransLabel = Constants.LABEL_SYNCH_TEST_TRANS;
 		} else {
 			this.synchInfoLabel = Constants.LABEL_GITHUB_REPO;
+			this.synchTransLabel = Constants.LABEL_SYNCH_TRANS;
 		}
 	}
 

@@ -19,6 +19,8 @@ public class Constants {
 	
 	public static final String LABEL_GITHUB_REPO = "GithubRepo";
 	public static final String LABEL_GITHUB_TEST_REPO = "GithubTestRepo";
+	public static final String LABEL_SYNCH_TRANS = "Transaction";
+	public static final String LABEL_SYNCH_TEST_TRANS = "TestTransaction";
 	
 	public static final String GithubRepositoriesLibraryTopic = 	
 			Constants.LIBRARY_SYNCH

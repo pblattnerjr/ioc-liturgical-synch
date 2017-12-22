@@ -5,15 +5,12 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.io.FilenameUtils;
 import org.ocmc.ioc.liturgical.schemas.constants.HTTP_RESPONSE_CODES;
 import org.ocmc.ioc.liturgical.schemas.models.supers.AbstractModel;
 import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepo;
 import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepositories;
 import org.ocmc.ioc.liturgical.schemas.models.ws.response.ResultJsonObjectArray;
 import org.ocmc.ioc.liturgical.synch.constants.GITHUB_MEDIA_TYPES;
-import org.ocmc.ioc.liturgical.synch.git.models.GitDiffLibraryLine;
-import org.ocmc.ioc.liturgical.synch.git.models.github.Commit;
 import org.ocmc.ioc.liturgical.synch.git.models.github.CommitDetails;
 import org.ocmc.ioc.liturgical.synch.git.models.github.CommitFile;
 import org.ocmc.ioc.liturgical.synch.git.models.github.CommitFileChanged;
@@ -25,7 +22,6 @@ import org.ocmc.ioc.liturgical.synch.git.models.github.Ref;
 import org.ocmc.ioc.liturgical.synch.git.models.github.Refs;
 import org.ocmc.ioc.liturgical.synch.git.models.github.Resources;
 import org.ocmc.ioc.liturgical.utils.ErrorUtils;
-import org.ocmc.ioc.liturgical.utils.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

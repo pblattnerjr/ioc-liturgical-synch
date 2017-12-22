@@ -1,10 +1,13 @@
 package org.ocmc.ioc.liturgical.synch.git.models;
 
 
+import org.ocmc.ioc.liturgical.schemas.models.supers.AbstractModel;
 import org.ocmc.ioc.liturgical.utils.ErrorUtils;
 import org.ocmc.ioc.liturgical.utils.GeneralUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.gson.annotations.Expose;
 
 /**
  * Represents a line read from an ares file.
@@ -19,23 +22,23 @@ import org.slf4j.LoggerFactory;
  * @author mac002
  *
  */
-public class LibraryLine  {
+public class LibraryLine  extends AbstractModel {
 	private static final Logger LOGGER = LoggerFactory
 			.getLogger(LibraryLine.class);
-	private String lineNbr = ""; // used to maintain the sequence within the ares file
-	private String key = "";
-	private String value = "";
-	private String domain = "";
-	private String topic = "";
-	private String comment = "";
-	public boolean doNotQuote = false; // sometimes the value is another key, so do not quote it
-	public boolean isEmptyValue = false; // handle both x =  and x = ""
-	public boolean isBlankLine = false;
-	public boolean isCommentLine = false;
-	public boolean hasCommentAfterValue = false;
-	public boolean isSimpleKeyValue = false;
-	public boolean hasError = false;
-	public boolean valueIsKey = false;
+	@Expose public String lineNbr = ""; // used to maintain the sequence within the ares file
+	@Expose public String key = "";
+	@Expose public String value = "";
+	@Expose public String domain = "";
+	@Expose public String topic = "";
+	@Expose public String comment = "";
+	@Expose 	public boolean doNotQuote = false; // sometimes the value is another key, so do not quote it
+	@Expose 	public boolean isEmptyValue = false; // handle both x =  and x = ""
+	@Expose 	public boolean isBlankLine = false;
+	@Expose 	public boolean isCommentLine = false;
+	@Expose 	public boolean hasCommentAfterValue = false;
+	@Expose 	public boolean isSimpleKeyValue = false;
+	@Expose 	public boolean hasError = false;
+	@Expose 	public boolean valueIsKey = false;
 	
 	private String delimiter = " = ";
 	

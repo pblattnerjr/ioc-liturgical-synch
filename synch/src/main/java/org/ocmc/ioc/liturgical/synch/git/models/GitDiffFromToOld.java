@@ -3,7 +3,7 @@ package org.ocmc.ioc.liturgical.synch.git.models;
 import java.util.ArrayList;
 import java.util.List;
 
-public class GitDiffFromTo {
+public class GitDiffFromToOld {
 	public enum TYPE {
 		ADD
 		, UPDATE
@@ -27,7 +27,7 @@ public class GitDiffFromTo {
 	private SIGN toSign = SIGN.OTHER;
 	private TYPE type = TYPE.UNKNOWN;
 	
-	public GitDiffFromTo(String from, String to) {
+	public GitDiffFromToOld(String from, String to) {
 		this.from = from;
 		this.to = to;
 		this.process();

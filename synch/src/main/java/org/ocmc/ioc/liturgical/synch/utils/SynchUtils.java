@@ -8,8 +8,8 @@ import java.util.TreeMap;
 
 import org.ocmc.ioc.liturgical.schemas.constants.VISIBILITY;
 import org.ocmc.ioc.liturgical.schemas.exceptions.BadIdException;
-import org.ocmc.ioc.liturgical.schemas.models.synch.AresPushTransaction;
-import org.ocmc.ioc.liturgical.schemas.models.synch.AresPushTransaction.TYPES;
+import org.ocmc.ioc.liturgical.schemas.models.synch.AresTransaction;
+import org.ocmc.ioc.liturgical.schemas.models.synch.AresTransaction.TYPES;
 import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepo;
 import org.ocmc.ioc.liturgical.synch.git.JGitUtils;
 import org.ocmc.ioc.liturgical.synch.git.models.GitDiffEntry;
@@ -47,13 +47,13 @@ public class SynchUtils {
 		Map<String,GitDiffLibraryLine> renameMap = new TreeMap<String,GitDiffLibraryLine>();
 		Map<String,GitDiffLibraryLine> unknownMap = new TreeMap<String,GitDiffLibraryLine>();
 		List<String> deletedFileList = new ArrayList<String>();
-		List<AresPushTransaction> transactions = new ArrayList<AresPushTransaction>();
+		List<AresTransaction> transactions = new ArrayList<AresTransaction>();
 
 		List<GitDiffEntry> entries = null;
-		if (githubRepo.getLastSynchCommitId() == null || githubRepo.getLastSynchCommitId().length() == 0) {
-			entries = JGitUtils.compareEmptyTree(githubRepo.lastFetchLocalPath);
+		if (githubRepo.getLastGitToDbSynchCommitId() == null || githubRepo.getLastGitToDbSynchCommitId().length() == 0) {
+			entries = JGitUtils.compareEmptyTree(githubRepo.localRepoPath);
 		} else {
-			entries = JGitUtils.compare(githubRepo.getLastFetchLocalPath(), githubRepo.getLastSynchCommitId());
+			entries = JGitUtils.compare(githubRepo.getLocalRepoPath(), githubRepo.getLastGitToDbSynchCommitId());
 		}
 		for (GitDiffEntry entry : entries) {
 			String who = entry.getCommit().getAuthorIdent().getName();
@@ -189,7 +189,7 @@ public class SynchUtils {
 					);
 		}
 
-		for (AresPushTransaction trans : transactions) {
+		for (AresTransaction trans : transactions) {
 			if (printDetails) {
 				trans.setPrettyPrint(true);
 				System.out.println(trans.toJsonString());
@@ -203,16 +203,16 @@ public class SynchUtils {
 		return result;
 	}
 
-	private static AresPushTransaction getAresPushTransaction(
+	private static AresTransaction getAresPushTransaction(
 			GitDiffLibraryLine line
 			, String hostName
 			, String macAddress
 			, TYPES type
 			, int counter
 			) {
-		AresPushTransaction trans = null;
+		AresTransaction trans = null;
 		try {
-			trans = new AresPushTransaction(
+			trans = new AresTransaction(
 					hostName
 					, macAddress
 					, line.getTimestamp() + GeneralUtils.padNumber("s", 4, counter)
@@ -274,14 +274,14 @@ public class SynchUtils {
 		return getAresFileParts(file, "_", false, true);
 	}
 	
-	public static List<AresPushTransaction> handleCommitFileAdded(
+	public static List<AresTransaction> handleCommitFileAdded(
 			String[] filenameFromParts
 			, String [] filenameToParts
 			, CommitFileChanged commitFile
 			, String committerName
 			, String committerDate
 			) {
-		List<AresPushTransaction> result = new ArrayList<AresPushTransaction>();
+		List<AresTransaction> result = new ArrayList<AresTransaction>();
 		List<GitDiffLibraryLine> gitDiffLibraryLines = processPatch(
 				filenameFromParts[1]
 				, filenameFromParts[0]
@@ -295,7 +295,7 @@ public class SynchUtils {
 		int counter = 0;
 		for (GitDiffLibraryLine line : gitDiffLibraryLines) {
 			counter++;
-			AresPushTransaction ares = getAresPushTransaction(
+			AresTransaction ares = getAresPushTransaction(
 					line
 					, hostName
 					, macAddress
@@ -307,14 +307,14 @@ public class SynchUtils {
 		return result;
 	}
 
-	public static List<AresPushTransaction> handleCommitFileModified(
+	public static List<AresTransaction> handleCommitFileModified(
 			String[] filenameFromParts
 			, String [] filenameToParts
 			, CommitFileChanged commitFile
 			, String committerName
 			, String committerDate
 			) {
-		List<AresPushTransaction> result = new ArrayList<AresPushTransaction>();
+		List<AresTransaction> result = new ArrayList<AresTransaction>();
 		List<GitDiffLibraryLine> gitDiffLibraryLines = processPatch(
 				filenameFromParts[1]
 				, filenameFromParts[0]
@@ -332,7 +332,7 @@ public class SynchUtils {
 			if (! line.getKey().equals(line.getFromKey())) {
 				type = TYPES.CHANGE_OF_KEY;
 			}
-			AresPushTransaction ares = getAresPushTransaction(
+			AresTransaction ares = getAresPushTransaction(
 					line
 					, hostName
 					, macAddress
@@ -344,25 +344,25 @@ public class SynchUtils {
 		return result;
 	}
 
-	public static List<AresPushTransaction> handleCommitFileRemoved(
+	public static List<AresTransaction> handleCommitFileRemoved(
 			String[] filenameFromParts
 			, String [] filenameToParts
 			, CommitFileChanged commitFile
 			, String committerName
 			, String committerDate
 			) {
-		List<AresPushTransaction> result = new ArrayList<AresPushTransaction>();
+		List<AresTransaction> result = new ArrayList<AresTransaction>();
 		return result;
 	}
 
-	public static List<AresPushTransaction> handleCommitFileRenamed(
+	public static List<AresTransaction> handleCommitFileRenamed(
 			String[] filenameFromParts
 			, String [] filenameToParts
 			, CommitFileRenamed commitFile
 			, String committerName
 			, String committerDate
 			) {
-		List<AresPushTransaction> result = new ArrayList<AresPushTransaction>();
+		List<AresTransaction> result = new ArrayList<AresTransaction>();
 		return result;
 	}
 

@@ -11,8 +11,9 @@ import org.ocmc.ioc.liturgical.schemas.constants.Constants;
 import org.ocmc.ioc.liturgical.schemas.constants.VISIBILITY;
 import org.ocmc.ioc.liturgical.schemas.exceptions.BadIdException;
 import org.ocmc.ioc.liturgical.schemas.models.supers.AbstractModel;
-import org.ocmc.ioc.liturgical.schemas.models.synch.AresPushTransaction;
-import org.ocmc.ioc.liturgical.schemas.models.synch.AresPushTransaction.TYPES;
+import org.ocmc.ioc.liturgical.schemas.models.synch.AresTransaction;
+import org.ocmc.ioc.liturgical.schemas.models.synch.AresTransaction.SOURCES;
+import org.ocmc.ioc.liturgical.schemas.models.synch.AresTransaction.TYPES;
 import org.ocmc.ioc.liturgical.synch.git.models.GitDiffTuple;
 import org.ocmc.ioc.liturgical.synch.git.models.SynchStatus;
 import org.ocmc.ioc.liturgical.synch.git.models.GitDiffLibraryLine;
@@ -43,7 +44,7 @@ public class GitCommitFileProcessor {
 	private Map<String,GitDiffLibraryLine> deleteMap = new TreeMap<String,GitDiffLibraryLine>();
 	private Map<String,GitDiffLibraryLine> renameMap = new TreeMap<String,GitDiffLibraryLine>();
 	private Map<String,GitDiffLibraryLine> unknownMap = new TreeMap<String,GitDiffLibraryLine>();
-	private List<AresPushTransaction> transactions = new ArrayList<AresPushTransaction>();
+	private List<AresTransaction> transactions = new ArrayList<AresTransaction>();
 	private CommitFileChanged commitFile = null;
 	private CommitFileRenamed renamedFile = null;
 	private String committerName = "";
@@ -56,6 +57,9 @@ public class GitCommitFileProcessor {
 	private String topicTo = "";
 	private STATUSES status = STATUSES.UNKNOWN;
 	private List<GitDiffLibraryLine> gitDiffLibraryLines = new ArrayList<GitDiffLibraryLine>();
+	private final String hostName = GeneralUtils.getHostName();
+	private final String macAddress = GeneralUtils.getMacAddress();
+
 	
 	/**
 	 * Constructor.
@@ -135,12 +139,9 @@ public class GitCommitFileProcessor {
 	
 	}
 	
-	public List<AresPushTransaction> process() {
+	public List<AresTransaction> process() {
 		if (this.status == STATUSES.RENAMED) {
-		/**
-		 * Renames are handled outside this class.
-		 * We do not create ares transactions for a file rename.
-		 */
+			
 		} else {
 			this.processPatchWithFromTo();
 			this.processMaps();
@@ -188,11 +189,11 @@ public class GitCommitFileProcessor {
 		this.unknownMap = unknownMap;
 	}
 
-	public List<AresPushTransaction> getTransactions() {
+	public List<AresTransaction> getTransactions() {
 		return transactions;
 	}
 
-	public void setTransactions(List<AresPushTransaction> transactions) {
+	public void setTransactions(List<AresTransaction> transactions) {
 		this.transactions = transactions;
 	}
 
@@ -407,14 +408,11 @@ public class GitCommitFileProcessor {
 	private void processMaps() {
 
 		// Convert the information into a set of AresTransactions.
-		String hostName = GeneralUtils.getHostName();
-		String macAddress = GeneralUtils.getMacAddress();
-
 		int counter = 0;
 		
 		for (GitDiffLibraryLine line : createMap.values()) {
 			counter++;
-			transactions.add(getAresPushTransaction(
+			transactions.add(getAresToDbTransaction(
 					line
 					, hostName
 					, macAddress
@@ -425,7 +423,7 @@ public class GitCommitFileProcessor {
 		}
 		for (GitDiffLibraryLine line : renameMap.values()) {
 			counter++;
-			transactions.add(getAresPushTransaction(
+			transactions.add(getAresToDbTransaction(
 					line
 					, hostName
 					, macAddress
@@ -436,7 +434,7 @@ public class GitCommitFileProcessor {
 		}
 		for (GitDiffLibraryLine line : updateMap.values()) {
 			counter++;
-			transactions.add(getAresPushTransaction(
+			transactions.add(getAresToDbTransaction(
 					line
 					, hostName
 					, macAddress
@@ -448,7 +446,7 @@ public class GitCommitFileProcessor {
 		for (GitDiffLibraryLine line : deleteMap.values()) {
 			counter++;
 			transactions.add(
-					getAresPushTransaction(
+					getAresToDbTransaction(
 							line
 							, hostName
 							, macAddress
@@ -460,20 +458,21 @@ public class GitCommitFileProcessor {
 
 	}
 
-	private AresPushTransaction getAresPushTransaction(
+	private AresTransaction getAresToDbTransaction(
 			GitDiffLibraryLine line
 			, String hostName
 			, String macAddress
 			, TYPES type
 			, int counter
 			) {
-		AresPushTransaction trans = null;
+		AresTransaction trans = null;
 		try {
-			trans = new AresPushTransaction(
+			trans = new AresTransaction(
 					hostName
 					, macAddress
 					, line.getTimestamp() + GeneralUtils.padNumber("s", 4, counter)
 					);
+			trans.setSource(SOURCES.GIT);
 			trans.setRequestingUser(line.getWho());
 			trans.setFromLibrary(line.getFromLibrary());
 			trans.setFromTopic(line.getFromTopic());
@@ -485,6 +484,28 @@ public class GitCommitFileProcessor {
 			trans.setToValue(line.getValue());
 			trans.setToComment(line.getComment());
 			trans.setType(type);
+			trans.setVisibility(VISIBILITY.PRIVATE);
+		} catch (BadIdException e) {
+			ErrorUtils.report(logger, e);
+		}
+		return trans;
+	}
+
+	public AresTransaction getAresToDBTransactionForFileRename() {
+		AresTransaction trans = null;
+		try {
+			trans = new AresTransaction(
+					hostName
+					, macAddress
+					, committerDate + GeneralUtils.padNumber("s", 4, 1)
+					);
+			trans.setSource(SOURCES.GIT);
+			trans.setRequestingUser(committerName);
+			trans.setFromLibrary(libraryFrom);
+			trans.setFromTopic(topicFrom);
+			trans.setToLibrary(libraryTo);
+			trans.setToTopic(topicTo);
+			trans.setType(TYPES.CHANGE_OF_LIBRARY);
 			trans.setVisibility(VISIBILITY.PRIVATE);
 		} catch (BadIdException e) {
 			ErrorUtils.report(logger, e);

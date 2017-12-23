@@ -3,7 +3,7 @@ package org.ocmc.ioc.liturgical.synch.git.models;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.ocmc.ioc.liturgical.schemas.models.synch.AresPushTransaction;
+import org.ocmc.ioc.liturgical.schemas.models.synch.AresTransaction;
 import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepo;
 
 /**
@@ -14,7 +14,7 @@ import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepo;
 public class SynchData {
 	private GithubRepo repo = null;
 	private SynchStatus status = null;
-	private List<AresPushTransaction> transactions = new ArrayList<AresPushTransaction>();
+	private List<AresTransaction> transactions = new ArrayList<AresTransaction>();
 
 	public SynchData(GithubRepo repo) {
 		this.repo = repo;
@@ -28,11 +28,11 @@ public class SynchData {
 		this.repo = repo;
 	}
 
-	public List<AresPushTransaction> getTransactions() {
+	public List<AresTransaction> getTransactions() {
 		return transactions;
 	}
 
-	public void setTransactions(List<AresPushTransaction> transactions) {
+	public void setTransactions(List<AresTransaction> transactions) {
 		this.transactions = transactions;
 	}
 

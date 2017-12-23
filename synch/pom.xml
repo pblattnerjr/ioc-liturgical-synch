@@ -11,9 +11,31 @@
   <url>http://maven.apache.org</url>
 
   <properties>
-	 <java.version>1.8</java.version>
+	<author>mcolburn</author>
+	<committer>mcolburn</committer>
+	<java.version>1.8</java.version>
+  	<maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+   <!-- github server corresponds to entry in ~/.m2/settings.xml -->
+    <github.global.server>github</github.global.server>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
+  
+  <scm>
+	<url>https://github.com/OCMC-Translation-Projects/ioc-liturgical-schemas</url>
+	<connection>scm:git:https://github.com/OCMC-Translation-Projects/ioc-liturgical-schemas.git</connection>
+	<developerConnection>scm:git:https://github.com/OCMC-Translation-Projects/ioc-liturgical-schemas.git</developerConnection>
+   </scm>
+  
+
+	<distributionManagement>
+	    <repository>
+	        <id>internal.repo</id>
+	        <name>Temporary Staging Repository</name>
+	        <url>file://${project.build.directory}/mvn-repo</url>
+	    </repository>
+	</distributionManagement>
+	
 
 	<repositories>
 	 <repository>
@@ -38,7 +60,7 @@
 	        </snapshots>
 	    </repository>
 	</repositories>
-
+	
   <dependencies>
 	<dependency>
 	  <groupId>org.ocmc</groupId>

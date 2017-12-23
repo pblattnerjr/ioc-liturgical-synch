@@ -101,7 +101,10 @@ public class JGitUtils {
 		return resultList;
 	}
 	
-	public static GitStatus updateAresGithubRepos(GithubRepositories repos, String baseDir) {
+	public static GitStatus updateAresGithubRepos(
+			GithubRepositories repos
+			, String baseDir
+			) {
 		GitStatus status = new GitStatus();
 		File repoDir = null;
 		for (GithubRepo repo : repos.getRepos()) {
@@ -111,7 +114,7 @@ public class JGitUtils {
 				if (repoDir.exists()) {
 //					logger.info("pulling " + repo.key);
 					pullRepository(repo, path.toString());
-					if (repo.lastSynchCommitId.equals(repo.lastFetchCommitId)) {
+					if (repo.lastGitToDbSynchCommitId.equals(repo.lastGitToDbFetchCommitId)) {
 						status.addUnchanged(repo);
 					} else {
 						status.addUpdated(repo);
@@ -406,9 +409,9 @@ public class JGitUtils {
 	}
 	
 	private static void setRepoFetchInfo(GithubRepo repo, String path) {
-		repo.setLastFetchTime(Instant.now().toString());
-		repo.setLastFetchCommitId(getHeadCommitName(path));
-		repo.setLastFetchLocalPath(path);
+		repo.setLastGitToDbFetchTime(Instant.now().toString());
+		repo.setLastGitToDbFetchCommitId(getHeadCommitName(path));
+		repo.setLocalRepoPath(path);
 	}
 
 	public static ObjectId getHeadCommitId(String repPath) {

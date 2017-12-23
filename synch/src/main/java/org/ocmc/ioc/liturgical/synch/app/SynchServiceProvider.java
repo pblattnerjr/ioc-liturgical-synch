@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 import org.ocmc.ioc.liturgical.synch.constants.Constants;
 import org.ocmc.ioc.liturgical.synch.constants.GITHUB_TEST_ARES_URLS;
 import org.ocmc.ioc.liturgical.synch.managers.SynchManager;
-import org.ocmc.ioc.liturgical.synch.tasks.SynchGitPushTask;
+import org.ocmc.ioc.liturgical.synch.tasks.SynchGitAndDbTask;
 import org.ocmc.ioc.liturgical.utils.ErrorUtils;
 import org.ocmc.ioc.liturgical.utils.MessageUtils;
 import org.slf4j.Logger;
@@ -152,7 +152,7 @@ public class SynchServiceProvider {
     			
     			if (synchEnabled) {
 					executorService.scheduleAtFixedRate(
-							new SynchGitPushTask(
+							new SynchGitAndDbTask(
 									synchManager
 									, githubToken
 									, debug

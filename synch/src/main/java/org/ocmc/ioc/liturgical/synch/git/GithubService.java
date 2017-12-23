@@ -321,8 +321,8 @@ public class GithubService {
 				}
 				this.repo = repo.getName();
 				String masterSha = this.getMasterSha();
-				repo.setLastFetchCommitId(masterSha);
-				repo.setLastFetchTime(Instant.now().toString());
+				repo.setLastGitToDbFetchCommitId(masterSha);
+				repo.setLastGitToDbFetchTime(Instant.now().toString());
 				list.add(repo);
 			} catch (Exception e) {
 				ErrorUtils.report(logger, e);

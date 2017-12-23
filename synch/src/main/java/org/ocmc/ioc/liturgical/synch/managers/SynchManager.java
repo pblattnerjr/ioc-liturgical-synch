@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.TreeMap;
 
 import org.neo4j.driver.v1.AuthTokens;
 import org.neo4j.driver.v1.Config;
@@ -24,14 +26,16 @@ import org.ocmc.ioc.liturgical.schemas.constants.DATA_SOURCES;
 import org.ocmc.ioc.liturgical.schemas.constants.HTTP_RESPONSE_CODES;
 import org.ocmc.ioc.liturgical.schemas.constants.RELATIONSHIP_TYPES;
 import org.ocmc.ioc.liturgical.schemas.constants.STATUS;
+import org.ocmc.ioc.liturgical.schemas.id.managers.IdManager;
 import org.ocmc.ioc.liturgical.schemas.models.ws.response.RequestStatus;
 import org.ocmc.ioc.liturgical.schemas.models.ws.response.ResultJsonObjectArray;
 import org.ocmc.ioc.liturgical.synch.app.SynchServiceProvider;
 import org.ocmc.ioc.liturgical.synch.constants.Constants;
 import org.ocmc.ioc.liturgical.synch.exceptions.DbException;
+import org.ocmc.ioc.liturgical.synch.git.AresTransTuple;
 import org.ocmc.ioc.liturgical.schemas.models.ModelHelpers;
 import org.ocmc.ioc.liturgical.schemas.models.db.docs.ontology.TextLiturgical;
-import org.ocmc.ioc.liturgical.schemas.models.synch.AresPushTransaction;
+import org.ocmc.ioc.liturgical.schemas.models.synch.AresTransaction;
 import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepo;
 import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepositories;
 import org.ocmc.ioc.liturgical.schemas.models.synch.Transaction;
@@ -736,7 +740,51 @@ public class SynchManager {
 			logger.info("Github Repos Synch Info:\n" + this.githubRepos.toJsonString());
 		}
 	}
-
+	
+	/**
+	 * TODO: this is where we will write the code to combine the processing
+	 * of both ares pushes and pulls.
+	 * @param fromGit  transactions from Git
+	 * @param fromDb transactions from the Database
+	 * @return the status of the request
+	 */
+	public RequestStatus processAres (
+			List<AresTransaction> fromGit
+			, List<AresTransaction> fromDb
+			) {
+		RequestStatus status = new RequestStatus();
+		/**
+		 * The map below will contain keys that are library~topic
+		 * and a value that is a tuple of both ares to db and db to ares transactions.
+		 * This allows us to compare the two transactions and decide how to apply them.
+		 */
+		Map<String,AresTransTuple> map = new TreeMap<String,AresTransTuple>();
+		for (AresTransaction ares : fromGit) {
+			IdManager idManager = new IdManager(ares.toLibrary, ares.toTopic, ares.toKey);
+			AresTransTuple tuple = new AresTransTuple();
+			tuple.setFromGit(ares);
+			map.put(idManager.getId(), tuple);
+		}
+		for (AresTransaction ares : fromDb) {
+			IdManager idManager = new IdManager(ares.toLibrary, ares.toTopic, ares.toKey);
+			AresTransTuple tuple = new AresTransTuple();
+			if (map.containsKey(idManager.getId())) {
+				tuple = map.get(idManager.getId());
+			}
+			tuple.setFromDb(ares);
+			map.put(idManager.getId(), tuple);
+		}
+		for (AresTransTuple tuple : map.values()) {
+			if (! tuple.valuesAndCommentsSame()) {
+				if (tuple.gitIsNewer()) {
+					// update db ???
+				} else {
+					// update git ???
+				}
+			}
+		}
+		return status;
+	}
 
 	/**
 	 * This method will create a Transaction from the AresPushTransaction
@@ -749,7 +797,8 @@ public class SynchManager {
 	 * @param ares transaction to be pushed
 	 * @return the status of the request
 	 */
-	public RequestStatus processAresPushTransaction(AresPushTransaction ares) {
+	public RequestStatus processAresPushTransaction(AresTransaction ares) {
+		RequestStatus status = new RequestStatus();
 		try {
 			String query = null; // if remains null, no transaction will be recorded
 			TextLiturgical doc = new TextLiturgical(
@@ -774,11 +823,16 @@ public class SynchManager {
 			case CHANGE_OF_KEY:
 				queries.addAll(this.createRenameKeyQueries(doc));
 				break;
-			case CHANGE_OF_LIBRARY:
-				// handled via createLibraryTopicRenameTransactions
-				break;
+			case CHANGE_OF_LIBRARY: 
+				// fall through to CHANGE_OF_TOPIC
 			case CHANGE_OF_TOPIC:
-				// handled via createLibraryTopicRenameTransactions
+				this.createLibraryTopicRenameTransactions(
+					ares.fromLibrary
+					, ares.fromTopic
+					, ares.toLibrary
+					, ares.toTopic
+					, ares.getRequestingUser()
+				);
 				break;
 			case CHANGE_OF_VALUE: // treat same as ADD_KEY_VALUE
 				query = this.createMergeNodeQuery(doc);
@@ -814,7 +868,6 @@ public class SynchManager {
 		} catch (Exception e) {
 			ErrorUtils.report(logger, e);
 		}
-		RequestStatus status = new RequestStatus();
 		return status;
 	}
 	

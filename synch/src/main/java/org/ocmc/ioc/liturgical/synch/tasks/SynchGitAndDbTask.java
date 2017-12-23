@@ -10,7 +10,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.ocmc.ioc.liturgical.schemas.models.synch.AresPushTransaction;
+import org.ocmc.ioc.liturgical.schemas.models.synch.AresTransaction;
 import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepo;
 import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepositories;
 import org.ocmc.ioc.liturgical.schemas.models.synch.Transaction;
@@ -30,9 +30,9 @@ import org.ocmc.ioc.liturgical.utils.ErrorUtils;
  * @author mac002
  *
  */
-public class SynchGitPushTask implements Runnable {
+public class SynchGitAndDbTask implements Runnable {
 	
-	private static final Logger logger = LoggerFactory.getLogger(SynchGitPushTask.class);
+	private static final Logger logger = LoggerFactory.getLogger(SynchGitAndDbTask.class);
 
 	SynchManager synchManager = null;
 	GithubService githubService = null;
@@ -40,7 +40,7 @@ public class SynchGitPushTask implements Runnable {
 	String token = "synchrepos";
 	boolean debug = false;
 	
-	public SynchGitPushTask (
+	public SynchGitAndDbTask (
 			SynchManager synchManager
 			, String token
 			) {
@@ -53,7 +53,7 @@ public class SynchGitPushTask implements Runnable {
 				);
 	}
 	
-	public SynchGitPushTask (
+	public SynchGitAndDbTask (
 			SynchManager synchManager
 			, String token
 			, boolean printpretty
@@ -72,6 +72,14 @@ public class SynchGitPushTask implements Runnable {
 	
 	@Override
 	public void run() {
+		/**
+		 * TODO:
+		 * 1. Create the AresPullTransactions using data from Github
+		 * 2. Create a map of the push and pulls using the LTK as the key.
+		 * 3. Process the map, using the timestamp of the Ares trans.  
+		 * 
+		 * At the moment, this code is only handling ares to db.
+		 */
 		this.doSynch();
 	}
 	
@@ -85,12 +93,12 @@ public class SynchGitPushTask implements Runnable {
 				
 				for (GithubRepo repo : repos.getRepos()) {
 					if (this.debug) {
-						logger.info("fCommitId = " + repo.lastFetchCommitId);
-						logger.info("sCommitId = " + repo.lastSynchCommitId);
+						logger.info("fCommitId = " + repo.lastGitToDbFetchCommitId);
+						logger.info("sCommitId = " + repo.lastGitToDbSynchCommitId);
 					}
 					if (
-							(repo.lastFetchCommitId.length() > 0 && repo.lastSynchCommitId.length() > 0)
-						&& (repo.lastSynchCommitId.equals(repo.lastFetchCommitId)))
+							(repo.lastGitToDbFetchCommitId.length() > 0 && repo.lastGitToDbSynchCommitId.length() > 0)
+						&& (repo.lastGitToDbSynchCommitId.equals(repo.lastGitToDbFetchCommitId)))
 					{
 						this.logMessage(repo.getName(), "is current");
 					} else {
@@ -100,7 +108,7 @@ public class SynchGitPushTask implements Runnable {
 								, repo.getName()
 								);
  						CommitDetails masterCommit = githubService.getMasterCommit();
-						if (repo.lastSynchCommitId.length() == 0) {
+						if (repo.lastGitToDbSynchCommitId.length() == 0) {
 							this.logMessage(repo.getName(), "first time to synch");
 							// TODO: handle initial synch.  Either we assume we always start with a db that has been loaded once or we assume it is empty
 						} else {
@@ -111,8 +119,8 @@ public class SynchGitPushTask implements Runnable {
 							 */
 							ResultJsonObjectArray result = 
 									githubService.compareCommits(
-											repo.lastSynchCommitId
-											, repo.lastFetchCommitId
+											repo.lastGitToDbSynchCommitId
+											, repo.lastGitToDbFetchCommitId
 											);
 							if (result.status.code == 200) {
 								JsonArray values = result.getFirstObject().get("files").getAsJsonArray();
@@ -123,19 +131,15 @@ public class SynchGitPushTask implements Runnable {
 											, masterCommit.commit.committer.date
 											);
 									fileProcessor.printGitDiffLibraryLines();
+									List<AresTransaction> aresList = null;
 									if (fileProcessor.getStatus() == 
 											GitCommitFileProcessor.STATUSES.RENAMED) {
-												synchManager
-												.createLibraryTopicRenameTransactions(
-												fileProcessor.getLibraryFrom()
-												, fileProcessor.getTopicFrom()
-												, fileProcessor.getLibraryTo()
-												, fileProcessor.getTopicTo()
-												, masterCommit.commit.committer.name
+										aresList.add(
+												fileProcessor.getAresToDBTransactionForFileRename()
 										);
 									} else {
-										List<AresPushTransaction> aresList = fileProcessor.process();
-										for (AresPushTransaction ares : aresList) {
+										aresList = fileProcessor.process();
+										for (AresTransaction ares : aresList) {
 											if (debug && printpretty) {
 												ares.setPrettyPrint(true);
 												System.out.println(ares.toJsonString());
@@ -149,8 +153,8 @@ public class SynchGitPushTask implements Runnable {
 								ErrorUtils.error(logger, result.status.getCode() + " " + result.getStatus().getDeveloperMessage());
 							}
 						}
-						repo.setLastSynchCommitId(repo.lastFetchCommitId);
-						repo.setLastSynchTime(Instant.now().toString());
+						repo.setLastGitToDbSynchCommitId(repo.lastGitToDbFetchCommitId);
+						repo.setLastGitToDbSynchTime(Instant.now().toString());
 					}
 					synchManager.updateGitRepoSynchInfo(repo);
 				}

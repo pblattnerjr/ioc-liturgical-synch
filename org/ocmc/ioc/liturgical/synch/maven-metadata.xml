@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <groupId>org.ocmc.ioc.liturgical</groupId>
+  <artifactId>synch</artifactId>
+  <versioning>
+    <versions>
+      <version>1.0-SNAPSHOT</version>
+    </versions>
+    <lastUpdated>20171223140208</lastUpdated>
+  </versioning>
+</metadata>

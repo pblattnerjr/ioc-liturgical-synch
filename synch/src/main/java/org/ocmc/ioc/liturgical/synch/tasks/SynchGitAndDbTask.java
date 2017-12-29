@@ -25,8 +25,10 @@ import org.ocmc.ioc.liturgical.utils.ErrorUtils;
 /**
  * Runs a task (separate thread) to read Github repositories,
  * convert changes to database transactions, 
- * and push the transactions to the synch server
- * .
+ * and push the transactions to the synch server.
+ * 
+ * The transactions currently are only for updating the database from git.
+ * TODO: update Github from the database.
  * @author mac002
  *
  */
@@ -63,6 +65,7 @@ public class SynchGitAndDbTask implements Runnable {
 		this.printpretty = printpretty;
 		this.token = token;
 		this.debug = debug;
+		this.synchManager.setDebug(debug);
 		githubService = new GithubService(
 				token
 				, GITHUB_INITIAL_ARES_URLS.GR_GR_COG.account
@@ -109,7 +112,7 @@ public class SynchGitAndDbTask implements Runnable {
 								);
  						CommitDetails masterCommit = githubService.getMasterCommit();
 						if (repo.lastGitToDbSynchCommitId.length() == 0) {
-							this.logMessage(repo.getName(), "first time to synch");
+								this.logMessage(repo.getName(), "first time to synch");
 							// TODO: handle initial synch.  Either we assume we always start with a db that has been loaded once or we assume it is empty
 						} else {
 							this.logMessage(repo.getName(), "will be synched");
@@ -129,9 +132,11 @@ public class SynchGitAndDbTask implements Runnable {
 											value
 											, masterCommit.commit.committer.name
 											, masterCommit.commit.committer.date
+											, repo.lastGitToDbSynchCommitId
+											, repo.lastGitToDbFetchCommitId
 											);
 									fileProcessor.printGitDiffLibraryLines();
-									List<AresTransaction> aresList = null;
+									List<AresTransaction> aresList = new ArrayList<AresTransaction>();
 									if (fileProcessor.getStatus() == 
 											GitCommitFileProcessor.STATUSES.RENAMED) {
 										aresList.add(
@@ -139,13 +144,13 @@ public class SynchGitAndDbTask implements Runnable {
 										);
 									} else {
 										aresList = fileProcessor.process();
-										for (AresTransaction ares : aresList) {
-											if (debug && printpretty) {
-												ares.setPrettyPrint(true);
-												System.out.println(ares.toJsonString());
-											}
-											synchManager.processAresPushTransaction(ares);
+									}
+									for (AresTransaction ares : aresList) {
+										if (debug && printpretty) {
+											ares.setPrettyPrint(true);
+											System.out.println(ares.toJsonString());
 										}
+										synchManager.processAresTransaction(ares);
 									}
 								}
 							} else {

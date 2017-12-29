@@ -3,7 +3,7 @@ package org.ocmc.ioc.liturgical.synch.constants;
 import java.util.concurrent.TimeUnit;
 
 public class Constants {
-	public static final String VERSION = "1.0-SNAPSHOT"; // should match most recent jar
+	public static final String VERSION = "1.0.1"; // should match most recent jar
 	public static final int boltDriverConnectionTimeout = 30;
 	public static final TimeUnit boltDriverConnectionTimeoutUnits = TimeUnit.SECONDS;
 	public static final String LIBRARY_SYNCH = "en_sys_synch";
@@ -21,6 +21,8 @@ public class Constants {
 	public static final String LABEL_GITHUB_TEST_REPO = "GithubTestRepo";
 	public static final String LABEL_SYNCH_TRANS = "Transaction";
 	public static final String LABEL_SYNCH_TEST_TRANS = "TestTransaction";
+	public static final String LABEL_SYNCH_ARES_TRANS = "AresTransaction";
+	public static final String LABEL_SYNCH_TEST_ARES_TRANS = "TestAresTransaction";
 	
 	public static final String GithubRepositoriesLibraryTopic = 	
 			Constants.LIBRARY_SYNCH

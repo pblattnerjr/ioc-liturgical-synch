@@ -44,7 +44,14 @@ public class LibraryLine  {
 	
 	private String delimiter = " = ";
 	
-	public LibraryLine(String lineNbr, String line)  {
+	public LibraryLine(
+			String domain
+			, String topic
+			, String lineNbr
+			, String line
+			)  {
+		this.domain = domain;
+		this.topic = topic;
 		this.lineNbr = lineNbr;
 		parseLine(lineNbr, line);
 	}
@@ -142,6 +149,7 @@ public class LibraryLine  {
 				if (line.contains("=") && parts[0].length() > 0) {
 					key = parts[0].trim();
 					value = "";
+					isSimpleKeyValue = true;
 				} else {
 					key = lineNumber;
 					value = line;
@@ -151,6 +159,9 @@ public class LibraryLine  {
 		}
 		if (comment == null) {
 			comment = "";
+		}
+		if (value != null && value.length() == 0) {
+			this.isEmptyValue = true;
 		}
 	}
 
@@ -195,7 +206,7 @@ public class LibraryLine  {
 		if (isAresIdLine() || isCommentLine) {
 			return false;
 		} else {
-			return value.contains("_");
+			return value.contains("_") || this.isValueIsKey();
 		}
 	}
 	

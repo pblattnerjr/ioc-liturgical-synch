@@ -47,6 +47,8 @@ public class GitCommitFileProcessor {
 	private List<AresTransaction> transactions = new ArrayList<AresTransaction>();
 	private CommitFileChanged commitFile = null;
 	private CommitFileRenamed renamedFile = null;
+	private String fromCommitId = "";
+	private String toCommitId = "";
 	private String committerName = "";
 	private String committerDate = "";
 	private String filenameFrom = "";
@@ -81,9 +83,13 @@ public class GitCommitFileProcessor {
 			JsonElement json
 			, String committerName
 			, String committerDate
+			, String fromCommitId
+			, String toCommitId
 			) {
 		this.committerName = committerName;
 		this.committerDate = committerDate;
+		this.fromCommitId = fromCommitId;
+		this.toCommitId = toCommitId;
 		CommitFile abstractFile = new CommitFile();
 		try {
 			abstractFile = AbstractModel.gson.fromJson(json, CommitFile.class);
@@ -472,6 +478,8 @@ public class GitCommitFileProcessor {
 					, macAddress
 					, line.getTimestamp() + GeneralUtils.padNumber("s", 4, counter)
 					);
+			trans.setFromCommitId(this.fromCommitId);
+			trans.setToCommitId(this.toCommitId);
 			trans.setSource(SOURCES.GIT);
 			trans.setRequestingUser(line.getWho());
 			trans.setFromLibrary(line.getFromLibrary());
@@ -500,6 +508,8 @@ public class GitCommitFileProcessor {
 					, committerDate + GeneralUtils.padNumber("s", 4, 1)
 					);
 			trans.setSource(SOURCES.GIT);
+			trans.setFromCommitId(this.fromCommitId);
+			trans.setToCommitId(this.toCommitId);
 			trans.setRequestingUser(committerName);
 			trans.setFromLibrary(libraryFrom);
 			trans.setFromTopic(topicFrom);

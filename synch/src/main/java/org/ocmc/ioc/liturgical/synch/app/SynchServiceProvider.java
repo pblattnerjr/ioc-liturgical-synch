@@ -62,13 +62,31 @@ public class SynchServiceProvider {
 		}
 	}
 
+	/**
+	 * The main method must be provided the database admin username and password
+	 * and a valid token for Github and one for Slack.  These can be passed via 
+	 * command line arguments, or if using docker-compose, they are passed 
+	 * through the setting of environment key-values.
+	 * 
+	 * @param args [0] db admin username [1] db admin password [2]  github token [3] slack token for synch channel
+	 */
 	public static void main( String[] args ) {
     	try {
     		Properties prop = new Properties();
     		InputStream input = null;
-        	String ws_usr = args[0];
-        	String ws_pwd = args[1];
-        	githubToken = args[2];
+    		
+    		String ws_usr = System.getenv("WS_USR");
+    		if (ws_usr == null) {
+    			ws_usr = args[0];
+    		}
+    		String ws_pwd = System.getenv("WS_PWD");
+    		if (ws_pwd == null) {
+    			ws_pwd = args[1];
+    		}
+    		githubToken = System.getenv("GITHUB_TOKEN");
+    		if (githubToken == null) {
+            	githubToken = args[2];
+    		}
         	SynchManager synchManager = null;
         	
     		try {
@@ -108,7 +126,15 @@ public class SynchServiceProvider {
     			logger.info("messaging_enabled: " + messagingEnabled);
     			
     			if (messagingEnabled) {
-    	        	messagingToken = args[3];
+    				try {
+    					messagingToken = System.getenv("MESSAGING_TOKEN");
+        	    		if (messagingToken == null) {
+            	        	messagingToken = args[3];
+        	    		}
+    				} catch (Exception e) {
+    					logger.info("main args [3] missing parameter for messaging token");
+    					throw e;
+    				}
     			}
 
     			if (synchEnabled) {

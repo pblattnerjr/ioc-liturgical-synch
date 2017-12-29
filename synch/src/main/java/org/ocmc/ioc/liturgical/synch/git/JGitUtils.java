@@ -101,6 +101,15 @@ public class JGitUtils {
 		return resultList;
 	}
 	
+	
+	/**
+	 * 1. Need GithubRepositories.
+	 * 2. Pass it to JGitUtils.updateAresGithubRepos.
+	 * 3. For each local repo, load it into the database
+	 */
+
+	
+	
 	public static GitStatus updateAresGithubRepos(
 			GithubRepositories repos
 			, String baseDir

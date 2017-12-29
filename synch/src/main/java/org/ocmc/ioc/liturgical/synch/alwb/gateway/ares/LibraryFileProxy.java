@@ -68,17 +68,11 @@ public class LibraryFileProxy  {
 			Reader r = new InputStreamReader(new FileInputStream(file), "UTF-8");
 			br = new BufferedReader(r);
 			FileNameParts parts = GatewayUtils.getAresFileNameParts(file.getName());
-			AresEntryId id = null;
 			String line = "";
 			String lineCount = "";
 			while ((line = br.readLine()) != null) {
 				lineCount = formattedLineCount();
-				LibraryLine al = new LibraryLine(lineCount, line);
-				id = new AresEntryId(parts, al.getKey(),
-						Constants.ID_DELIMITER);
-				al.setDomain(id.getDomain());
-				al.setTopic(id.getTopic());
-				
+				LibraryLine al = new LibraryLine(parts.getDomain(), parts.getTopic(), lineCount, line);
 				linesByKey.put(al.getLineIdentifier(), al);
 				linesByLineNbr.put(lineCount, al.getLineIdentifier());
 			}

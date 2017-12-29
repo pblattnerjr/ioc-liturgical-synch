@@ -66,6 +66,8 @@ public class SynchManager {
 	private boolean useTestRepos = false;
 	private String synchInfoLabel = Constants.LABEL_GITHUB_REPO;
 	private String synchTransLabel = Constants.LABEL_SYNCH_TRANS;
+	private String synchAresTransLabel = Constants.LABEL_SYNCH_ARES_TRANS;
+	private boolean debug = false;
 	
 	public SynchManager(
 			  String synchDomain
@@ -171,6 +173,7 @@ public class SynchManager {
 			return result;
 	}
 
+	  
 	public ResultJsonObjectArray getForQuery(String query) {
 			return getResultObjectForQuery(query);
 	}
@@ -689,7 +692,39 @@ public class SynchManager {
 		return result;
 	}
 
-		public RequestStatus updateGitSynchInfo(GithubRepositories doc) throws DbException {
+	public RequestStatus saveAresTransaction(AresTransaction doc) throws DbException {
+		RequestStatus result = new RequestStatus();
+		int count = 0;
+		setIdConstraint(this.synchAresTransLabel);
+		String query = "create (doc:%s) set doc = {props} return doc";
+		query = String.format(query, this.synchAresTransLabel);
+		ResultSummary summary = null;
+		try (org.neo4j.driver.v1.Session session = this.synchDriver.session()) {
+			Map<String,Object> props = ModelHelpers.getAsPropertiesMap(doc);
+			StatementResult neoResult = session.run(query, props);
+			summary = neoResult.summary();
+			count = summary.counters().nodesCreated();
+			if (count > 0) {
+		    	result.setCode(HTTP_RESPONSE_CODES.CREATED.code);
+		    	result.setMessage(HTTP_RESPONSE_CODES.CREATED.message);
+			} else {
+		    	result.setCode(HTTP_RESPONSE_CODES.BAD_REQUEST.code);
+		    	result.setMessage(summary.notifications().toString());
+			}
+		} catch (Exception e){
+			if (e.getMessage().contains("already exists")) {
+				result.setCode(HTTP_RESPONSE_CODES.CONFLICT.code);
+				result.setDeveloperMessage(HTTP_RESPONSE_CODES.CONFLICT.message);
+			} else {
+				result.setCode(HTTP_RESPONSE_CODES.BAD_REQUEST.code);
+				result.setDeveloperMessage(e.getMessage());
+			}
+			result.setUserMessage(e.getMessage());
+		}
+		return result;
+	}
+
+	public RequestStatus updateGitSynchInfo(GithubRepositories doc) throws DbException {
 			RequestStatus result = new RequestStatus();
 			for (GithubRepo repo : doc.getRepos()) {
 				result = updateGitRepoSynchInfo(repo);
@@ -778,8 +813,12 @@ public class SynchManager {
 			if (! tuple.valuesAndCommentsSame()) {
 				if (tuple.gitIsNewer()) {
 					// update db ???
+//					transaction.setAresTransId(ares.getId());
+//					this.recordTransaction(transaction);
+//					this.saveAresTransaction(ares); // for future reference in case there are questions
 				} else {
 					// update git ???
+					// TODO: save AresTrans
 				}
 			}
 		}
@@ -787,7 +826,7 @@ public class SynchManager {
 	}
 
 	/**
-	 * This method will create a Transaction from the AresPushTransaction
+	 * This method will create a Transaction from the AresTransaction
 	 * and record it in the synch database.  
 	 * 
 	 * Because we do not know at this point whether a doc already exists,
@@ -797,7 +836,7 @@ public class SynchManager {
 	 * @param ares transaction to be pushed
 	 * @return the status of the request
 	 */
-	public RequestStatus processAresPushTransaction(AresTransaction ares) {
+	public RequestStatus processAresTransaction(AresTransaction ares) {
 		RequestStatus status = new RequestStatus();
 		try {
 			String query = null; // if remains null, no transaction will be recorded
@@ -860,9 +899,12 @@ public class SynchManager {
 					transaction.setFromAres(true);
 					transaction.setRequestingMac(ares.requestingMac);
 					transaction.setPrettyPrint(true);
-					System.out.println(transaction.toJsonString());
-					// TODO: uncomment next line
-	//				recordTransaction(transaction);
+					if (this.debug) {
+						System.out.println(transaction.toJsonString());
+					}
+					transaction.setAresTransId(ares.getId());
+					this.recordTransaction(transaction);
+					this.saveAresTransaction(ares); // for future reference in case there are questions
 				}
 			}
 		} catch (Exception e) {
@@ -1083,9 +1125,11 @@ public class SynchManager {
 		if (useTestRepos) {
 			this.synchInfoLabel = Constants.LABEL_GITHUB_TEST_REPO;
 			this.synchTransLabel = Constants.LABEL_SYNCH_TEST_TRANS;
+			this.synchAresTransLabel = Constants.LABEL_SYNCH_TEST_ARES_TRANS;
 		} else {
 			this.synchInfoLabel = Constants.LABEL_GITHUB_REPO;
 			this.synchTransLabel = Constants.LABEL_SYNCH_TRANS;
+			this.synchAresTransLabel = Constants.LABEL_SYNCH_ARES_TRANS;
 		}
 	}
 
@@ -1096,6 +1140,30 @@ public class SynchManager {
 	public void setSynchInfoLabel(String synchInfoLabel) {
 		this.synchInfoLabel = synchInfoLabel;
 		this.useTestRepos = synchInfoLabel.equals(Constants.LABEL_GITHUB_TEST_REPO);
+	}
+
+	public boolean isDebug() {
+		return debug;
+	}
+
+	public void setDebug(boolean debug) {
+		this.debug = debug;
+	}
+
+	public String getSynchTransLabel() {
+		return synchTransLabel;
+	}
+
+	public void setSynchTransLabel(String synchTransLabel) {
+		this.synchTransLabel = synchTransLabel;
+	}
+
+	public String getSynchAresTransLabel() {
+		return synchAresTransLabel;
+	}
+
+	public void setSynchAresTransLabel(String synchAresTransLabel) {
+		this.synchAresTransLabel = synchAresTransLabel;
 	}
 
 }

@@ -11,6 +11,7 @@ import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.GraphDatabase;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
+import org.ocmc.ioc.liturgical.schemas.constants.Constants;
 import org.ocmc.ioc.liturgical.schemas.constants.HTTP_RESPONSE_CODES;
 import org.ocmc.ioc.liturgical.schemas.models.ModelHelpers;
 import org.ocmc.ioc.liturgical.schemas.models.db.docs.ontology.TextLiturgical;
@@ -54,6 +55,10 @@ public class AresToNeo4j {
 
 	private static List<String> constraints = new ArrayList<String>();
 
+	private static void pullFromGitHub(String rootPath) {
+		
+	}
+	
 	/**
 	 * Program to load a neo4j database from ares files.
 	 * 
@@ -65,8 +70,8 @@ public class AresToNeo4j {
 		String pwd = args[1];
 		String url = args[2];
 
-		boolean updateDatabaseNodes = true; 
-		boolean updateDatabaseRelationships = true; 
+		boolean updateDatabaseNodes = false; 
+		boolean updateDatabaseRelationships = false; 
 		boolean useResolvedValues = false; // if true, will be used as read-only database
 		// and, if true, there won't be any relationships between nodes
 		
@@ -77,6 +82,11 @@ public class AresToNeo4j {
 		String idSeparator = "~";
 		Pattern punctPattern = Pattern.compile("[˙·,.;!?(){}\\[\\]<>%]"); // punctuation 
 		
+		int valuesWithText = 0;
+		int valuesWithIds = 0;
+		int valuesWithNothing = 0;
+		int pointsToSelf = 0;
+		
 		// Load the ares
 		LibraryProxyManager libProxyManager;
 		String alwbPath = "/Users/mac002/Git/alwb-repositories/ages";
@@ -85,38 +95,37 @@ public class AresToNeo4j {
 		/**
 		 * Add each domain that you want to process
 		 */
-//		domainsToProcess.add("en_US_andronache");
-//		domainsToProcess.add("en_US_barrett");
-//		domainsToProcess.add("en_US_boyer");
-//		domainsToProcess.add("en_US_constantinides");
-//		domainsToProcess.add("en_US_dedes");
-//		domainsToProcess.add("en_US_goa");
-//		domainsToProcess.add("en_US_holycross");
+		domainsToProcess.add("en_US_andronache");
+		domainsToProcess.add("en_US_barrett");
+		domainsToProcess.add("en_US_boyer");
+		domainsToProcess.add("en_US_constantinides");
+		domainsToProcess.add("en_US_dedes");
+		domainsToProcess.add("en_US_goa");
+		domainsToProcess.add("en_US_holycross");
 		domainsToProcess.add("en_UK_lash");
-//		domainsToProcess.add("en_US_oca");
-//		domainsToProcess.add("en_US_public");
-//		domainsToProcess.add("en_US_repass");
-//		domainsToProcess.add("en_US_unknown");
-//		domainsToProcess.add("gr_GR_cog");
+		domainsToProcess.add("en_US_oca");
+		domainsToProcess.add("en_US_public");
+		domainsToProcess.add("en_US_repass");
+		domainsToProcess.add("en_US_unknown");
+		domainsToProcess.add("gr_GR_cog");
 		
 		// ages scripture
-//		domainsToProcess.add("en_UK_kjv");
-//		domainsToProcess.add("en_US_eob");
-//		domainsToProcess.add("en_US_kjv");
-//		domainsToProcess.add("en_US_net");
-//		domainsToProcess.add("en_US_nkjv");
-//		domainsToProcess.add("en_US_rsv");
-//		domainsToProcess.add("en_US_saas");
-		
-
+		domainsToProcess.add("en_UK_kjv");
+		domainsToProcess.add("en_US_eob");
+		domainsToProcess.add("en_US_kjv");
+		domainsToProcess.add("en_US_net");
+		domainsToProcess.add("en_US_nkjv");
+		domainsToProcess.add("en_US_rsv");
+		domainsToProcess.add("en_US_saas");
 		
 		// Kenya
 		domainsToProcess.add("kik_KE_oak");
 		domainsToProcess.add("swh_KE_oak");
 		
 		// added by Meg
-//		domainsToProcess.add("fra_FR_oaf");
-//		domainsToProcess.add("spa_GT_odg");
+		domainsToProcess.add("fra_FR_oaf");
+		domainsToProcess.add("spa_GT_odg");
+
 		/**
 		 * Prepare a list to hold the create Queries
 		 */
@@ -156,6 +165,12 @@ public class AresToNeo4j {
 
 					for (LibraryLine line : fileProxy.getValues()) {
 						boolean addToDb = true;
+						if (fileDomain.equals("spa_gt_odg")
+								&& fileTopic.equals("le.ep.me.m11.d24")
+								&& line.getKey().equals("lemeLI.Epistle.version")
+								) {
+							System.out.print("");
+						}
 						if (line.isSimpleKeyValue || line.isRedirect()) {
 							if (useResolvedValues) { // determine whether we will use this with a normalized database
 								if (line.getValue() == null || line.getValue().trim().length() < 1) {
@@ -186,71 +201,97 @@ public class AresToNeo4j {
 									}
 								}
 							} else if (line.isRedirect()) {
-								// System.out.print(line.getValue());
 								String comment = line.getComment();
 								if (comment != null && comment.length() > 0) {
 									theNode.setComment(LibraryUtils.escapeQuotes(comment));
 								}
-								String redirectTopic = "";
-								String redirectDomain = "";
-								String redirectId = line.getValue();
-								String[] parts = redirectId.split("_");
+								String redirectDomain = line.getDomain();
+								String redirectTopic = line.getTopic();
+								String redirectKey = line.getKey();
+								String[] parts = line.getValue().split("_");
 								LibraryLine redirectLine = null;
-								if (parts.length > 3) {
+								int partsLength = parts.length;
+								switch (partsLength) {
+								case 1: {
+									valuesWithIds++;
+									redirectKey = line.getValue();
+									break;
+								}
+								case 2: {
+									valuesWithIds++;
+									redirectKey = line.getValue();
+									break;
+								}
+								case 3: {
+									valuesWithIds++;
+									redirectKey = line.getValue();
+									break;
+								}
+								default: {
+									valuesWithIds++;
 									redirectTopic = parts[0];
 									String redirectRealm = parts[3].substring(0, parts[3].indexOf("."));
-									String redirectKey = parts[3].substring(parts[3].indexOf(".") + 1,
-											parts[3].length());
 									redirectDomain = parts[1] + "_" + parts[2] + "_" + redirectRealm;
-									redirectLine = libProxyManager
-											.getLine(redirectTopic + "_" + redirectDomain, redirectKey);
-									if (redirectLine == null) {
-										// this value points to a key that does
-										// not exist.
-										// TODO decide how to handle. For now,
-										// we go ahead and create the node,
-										// but it won't point to an existing
-										// node.
-										// You can find these bad nodes using:
-										// match (l:LitText) where not
-										// exists(l.value) and not
-										// (l)-[:VALUE_FROM]->() return l.id,
-										// l.value
-										redirectLine = null;
-										if (useResolvedValues) {
-											addToDb = false;
-										}
+									StringBuffer sb = new StringBuffer();
+									sb.append(parts[3].substring(parts[3].indexOf(".") + 1, parts[3].length()));
+									for (int i = 4; i < partsLength; i++) {
+										sb.append("_");
+										sb.append(parts[i]);
 									}
-									redirectDomain = redirectDomain.toLowerCase();
-									redirectId = redirectDomain + "~" + redirectTopic + "~" + redirectKey;
-									if (parts.length == 5) {
-										redirectId = redirectId + "_" + parts[4];
-									}
-								} else {
-									System.out.println("Bad redirect: " + theNode.getId() + ": " + redirectId);
+									redirectKey = sb.toString();
+									break;
 								}
-
-								String nodeRedirect = getRedirectCypherTo(
-										theNode.getId()
-										, theNode.getOntologyTopic().label
-										, redirectId
-										);
-								if (useResolvedValues) {
-									if (redirectLine == null 
-											|| redirectLine.getValue() == null 
-											|| redirectLine.getValue().length() < 1
-											|| (! redirectLine.getDomain().toLowerCase().startsWith(line.getDomain().toLowerCase()))
-											) {
+								}
+								redirectLine = libProxyManager
+										.getLine(redirectTopic + "_" + redirectDomain, redirectKey);
+								if (redirectLine == null) {
+									// this value points to a key that does
+									// not exist.
+									// TODO decide how to handle. For now,
+									// we go ahead and create the node,
+									// but it won't point to an existing
+									// node.
+									// You can find these bad nodes using:
+									// match (l:LitText) where not
+									// exists(l.value) and not
+									// (l)-[:VALUE_FROM]->() return l.id,
+									// l.value
+									System.out.println("Redirect key does not exist: " + line.getTopic() + "_" + line.getDomain() + ".ares: " + line.getLine());
+									if (useResolvedValues) {
 										addToDb = false;
-									} else {
-										addToDb = true;
-										String value = Normalizer.normalize(LibraryUtils.escapeQuotes(redirectLine.getValue()),Normalizer.Form.NFC);
-										theNode.setValue(value);
 									}
-								} else {
-									redirectQueries.add(nodeRedirect);
 								}
-							}
+								redirectDomain = redirectDomain.toLowerCase();
+								String redirectId = redirectDomain + Constants.ID_DELIMITER + redirectTopic + Constants.ID_DELIMITER + redirectKey;
+								if (parts.length == 5) {
+									redirectId = redirectId + "_" + parts[4];
+								}
+								
+								if (theNode.getId().equals(redirectId)) {
+									System.out.println("Points to self: " + line.getLine());
+								} else {
+									String nodeRedirect = getRedirectCypherTo(
+											theNode.getId()
+											, theNode.getOntologyTopic().label
+											, redirectId
+											);
+									if (useResolvedValues) {
+										if (redirectLine == null 
+												|| redirectLine.getValue() == null 
+												|| redirectLine.getValue().length() < 1
+												|| (! redirectLine.getDomain().toLowerCase().startsWith(line.getDomain().toLowerCase()))
+												) {
+											addToDb = false;
+										} else {
+											addToDb = true;
+											String value = Normalizer.normalize(LibraryUtils.escapeQuotes(redirectLine.getValue()),Normalizer.Form.NFC);
+											theNode.setValue(value);
+										}
+									} else {
+										redirectQueries.add(nodeRedirect);
+									}
+								}
+								}
 							if (addToDb) {
 								textsToCreate.add(theNode);
 							}
@@ -260,11 +301,13 @@ public class AresToNeo4j {
 
 				System.out.println(textsToCreate.size() + " create queries prepared...");
 				if (updateDatabaseNodes) {
-					System.out.println("Merging " + textsToCreate.size() + " nodes...");
+					System.out.println("Creating " + textsToCreate.size() + " nodes...");
 					for (TextLiturgical text : textsToCreate) {
 						try {
-							RequestStatus result = insert(session, text);
-							count++;
+							if (updateDatabaseNodes) {
+								RequestStatus result = insert(session, text);
+								count++;
+							}
 						} catch (Exception e) {
 							System.out.println(e.getStackTrace());
 						}
@@ -276,16 +319,21 @@ public class AresToNeo4j {
 				 * value is redirected to another node.
 				 */
 				int relCount = 0;
-				if (updateDatabaseRelationships) {
-					System.out
-							.println("Merging VALUE_FROM relationships for " + redirectQueries.size() + " nodes...");
-					for (String query : redirectQueries) {
-						try {
+				System.out
+						.println("Merging VALUE_FROM relationships for " + redirectQueries.size() + " nodes...");
+				for (String query : redirectQueries) {
+					try {
+						if (updateDatabaseRelationships) {
 							StatementResult result = session.run(query);
-							relCount++;
-						} catch (Exception e) {
-							System.out.println(e.getStackTrace());
+							count = result.consume().counters().relationshipsCreated();
+							if (count == 0) {
+								System.out.println("Did not create relationship: " + query);
+							} else {
+								relCount++;
+							}
 						}
+					} catch (Exception e) {
+						System.out.println(e.getStackTrace());
 					}
 				}
 
@@ -306,8 +354,11 @@ public class AresToNeo4j {
 			, String label
 			, String redirectId
 			) {
+		if (id.equals(redirectId)) {
+			System.out.print("oh no");
+		}
 		return "MATCH (d:" + label + " {id:'" + id + "'}), (t:"
-				+ label + " {id:'" + redirectId + "'}) CREATE (d)-[:VALUE_FROM]->(t)";
+				+ label + " {id:'" + redirectId + "'}) CREATE (d)-[:VALUE_FROM]->(t) return d";
 	}
 	
 	public static RequestStatus insert(Session session, LTKDb doc) throws DbException {

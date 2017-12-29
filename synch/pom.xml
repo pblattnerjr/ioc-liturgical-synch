@@ -3,12 +3,12 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.ocmc.ioc.liturgical</groupId>
-  <artifactId>synch</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <artifactId>ioc-liturgical-synch</artifactId>
+  <version>1.0.1</version>
   <packaging>jar</packaging>
 
   <name>synch</name>
-  <url>http://maven.apache.org</url>
+ <url>https://github.com/OCMC-Translation-Projects/ioc-liturgical-synch</url>
 
   <properties>
 	<author>mcolburn</author>
@@ -152,15 +152,15 @@
             </resource>
         </resources>
         <plugins>
-		<plugin>
-		        <groupId>org.apache.maven.plugins</groupId>
-		        <artifactId>maven-surefire-plugin</artifactId>
-		        <version>2.12.4</version>
-			   <configuration>
-		          <skipTests>true</skipTests>
-		       </configuration>
-		  </plugin>
-		  <plugin>
+			<plugin>
+			        <groupId>org.apache.maven.plugins</groupId>
+			        <artifactId>maven-surefire-plugin</artifactId>
+			        <version>2.12.4</version>
+				   <configuration>
+			          <skipTests>true</skipTests>
+			       </configuration>
+			  </plugin>
+			 <plugin>
 				  <groupId>org.apache.maven.plugins</groupId>
 				  <artifactId>maven-source-plugin</artifactId>
 			      <version>3.0.1</version>
@@ -187,15 +187,6 @@
 			  </executions>
 			</plugin>
             <plugin>
-                <groupId>com.github.eirslett</groupId>
-                <artifactId>frontend-maven-plugin</artifactId>
-                <version>0.0.24</version>
-                <configuration>
-                    <workingDirectory>src/main/resources</workingDirectory>
-                    <arguments>--production</arguments>
-                </configuration>
-            </plugin>
-            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.6.0</version>
@@ -204,6 +195,31 @@
                     <target>${java.version}</target>
                 </configuration>
             </plugin>
+		    <plugin>
+            	<groupId>org.apache.maven.plugins</groupId>
+            	<artifactId>maven-shade-plugin</artifactId>
+            	<version>2.4.3</version>
+				<configuration>
+				    <filters>
+				        <filter>
+				            <artifact>*:*</artifact>
+				            <excludes>
+				                <exclude>META-INF/*.SF</exclude>
+				                <exclude>META-INF/*.DSA</exclude>
+				                <exclude>META-INF/*.RSA</exclude>
+				            </excludes>
+				        </filter>
+				    </filters>
+				</configuration>
+			      <executions>
+			          <execution>
+			            <phase>package</phase>
+			            <goals>
+			              <goal>shade</goal>
+			            </goals>
+			          </execution>
+			        </executions>
+           </plugin>
 		  <plugin>
 		      <!-- Build an executable JAR -->
 		      <groupId>org.apache.maven.plugins</groupId>
@@ -214,45 +230,56 @@
 		          <manifest>
 		            <addClasspath>true</addClasspath>
 		            <classpathPrefix>resources/</classpathPrefix>
-		            <mainClass>ioc.liturgical.ws.app.ServiceProvider</mainClass>
+		            <mainClass>org.ocmc.ioc.liturgical.synch.app.SynchServiceProvider</mainClass>
 		          </manifest>
 		        </archive>
 		      </configuration>
 		    </plugin>
 		    <plugin>
-            	<groupId>org.apache.maven.plugins</groupId>
-            	<artifactId>maven-shade-plugin</artifactId>
-            	<version>2.4.3</version>
-			      <executions>
-			          <execution>
-			            <phase>package</phase>
-			            <goals>
-			              <goal>shade</goal>
-			            </goals>
-			          </execution>
-			        </executions>
-           </plugin>
-			<plugin>
-			        <groupId>org.codehaus.mojo</groupId>
-			        <artifactId>exec-maven-plugin</artifactId>
-			        <version>1.2.1</version>
- 			        <executions>
-			            <execution>
-			                <id>default-cli</id>
-			                <goals>
-			                    <goal>exec</goal>
-			                </goals>
-			                <configuration>
-			                    <executable>java</executable>
-			                    <workingDirectory>/tmp</workingDirectory>
-			                    <arguments>
-			                        <argument>-jar</argument>
-			                        <argument>${basedir}/target/liturgical-ws-${project.version}.jar</argument>
-			                    </arguments>
-			                </configuration>                        
-			            </execution>
-			        </executions>
-			    </plugin>         
-            </plugins>
+		        <artifactId>maven-deploy-plugin</artifactId>
+		        <version>2.8.1</version>
+		        <configuration>
+		            <altDeploymentRepository>internal.repo::default::file://${project.build.directory}/mvn-repo</altDeploymentRepository>
+		        </configuration>
+		    </plugin>
+		    <plugin>
+		      <groupId>org.apache.maven.plugins</groupId>
+		      <artifactId>maven-gpg-plugin</artifactId>
+		      <version>1.5</version>
+		      <executions>
+		        <execution>
+		          <id>sign-artifacts</id>
+		          <phase>verify</phase>
+		          <goals>
+		            <goal>sign</goal>
+		          </goals>
+		        </execution>
+		      </executions>
+		    </plugin>
+	       <plugin>
+	            <groupId>com.github.github</groupId>
+	            <artifactId>site-maven-plugin</artifactId>
+	            <version>0.12</version>
+	            <configuration>
+	                <message>Maven artifacts for ${project.version}</message>  <!-- git commit message -->
+	                <noJekyll>true</noJekyll>                                  <!-- disable webpage processing -->
+	                <outputDirectory>${project.build.directory}/mvn-repo</outputDirectory> <!-- matches distribution management repository url above -->
+	                <branch>refs/heads/mvn-repo</branch>                       <!-- remote branch name -->
+	                <includes><include>**/*</include></includes>
+	                <merge>true</merge>                                        <!-- don't delete old artifacts -->
+	                <repositoryName>ioc-liturgical-synch</repositoryName>      <!-- github repo name -->
+	                <repositoryOwner>OCMC-Translation-Projects</repositoryOwner>    <!-- github username  -->
+	            </configuration>
+	            <executions>
+	              <!-- run site-maven-plugin's 'site' target as part of the build's normal 'deploy' phase -->
+	              <execution>
+	                <goals>
+	                  <goal>site</goal>
+	                </goals>
+	                <phase>deploy</phase>
+	              </execution>
+	            </executions>
+	        </plugin>
+        </plugins>
     </build>
 </project>

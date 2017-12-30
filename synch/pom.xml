@@ -4,7 +4,6 @@
 
   <groupId>org.ocmc.ioc.liturgical</groupId>
   <artifactId>ioc-liturgical-synch</artifactId>
-  <version>1.0.1</version>
   <packaging>jar</packaging>
 
   <name>synch</name>
@@ -282,4 +281,5 @@
 	        </plugin>
         </plugins>
     </build>
+   <version>1.0.6</version>
 </project>

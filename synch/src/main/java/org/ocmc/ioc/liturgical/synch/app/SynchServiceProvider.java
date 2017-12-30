@@ -10,6 +10,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.ocmc.ioc.liturgical.synch.constants.Constants;
+import org.ocmc.ioc.liturgical.synch.constants.GITHUB_INITIAL_ARES_URLS;
 import org.ocmc.ioc.liturgical.synch.constants.GITHUB_TEST_ARES_URLS;
 import org.ocmc.ioc.liturgical.synch.managers.SynchManager;
 import org.ocmc.ioc.liturgical.synch.tasks.SynchGitAndDbTask;
@@ -90,12 +91,12 @@ public class SynchServiceProvider {
         	SynchManager synchManager = null;
         	
     		try {
+    			logger.info("ioc-liturgical-synch version: " + Constants.VERSION);
     			logger.info("logger info enabled = " + logger.isInfoEnabled());
     			logger.info("logger warn enabled = " + logger.isWarnEnabled());
     			logger.info("logger trace enabled = " + logger.isTraceEnabled());
     			logger.info("logger debug enabled = " + logger.isDebugEnabled());
     			logger.debug("If you see this, logger.debug is working");
-    			logger.info("ioc-liturgical-synch version: " + Constants.VERSION);
     			SynchServiceProvider.class.getClassLoader();
     			String location = getLocation();
     			logger.info("Jar is executing from: " + location);
@@ -160,18 +161,9 @@ public class SynchServiceProvider {
     						, synchBoltPort
     						, ws_usr
     						, ws_pwd
+    						, testGitSynch
+    						, deleteTestGitRepos
     				);
-    				
-    				if (testGitSynch) {
-    					logger.info("Using test ares repos to test git synch");
-    					logger.info("The docs in the synch db will use the label " + Constants.LABEL_GITHUB_TEST_REPO);
-    					synchManager.setGithubRepos(GITHUB_TEST_ARES_URLS.toPOJO());
-    					synchManager.setUseTestRepos(true);
-    					if (deleteTestGitRepos) {
-    						logger.info("Deleting test repos");
-        					synchManager.deleteTestRepos();
-    					}
-    				}
     			} else {
     				synchDomainWithPort = "";
     			}

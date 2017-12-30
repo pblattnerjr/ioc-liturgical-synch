@@ -164,7 +164,9 @@ public class SynchGitAndDbTask implements Runnable {
 					synchManager.updateGitRepoSynchInfo(repo);
 				}
 				int limitEnd = githubService.GetRemainingLimit();
-				logger.info("Github calls by synch task = " + (limitStart - limitEnd) + ". Available: " + limitEnd);
+				if (debug) {
+					logger.info("Github calls by synch task = " + (limitStart - limitEnd) + ". Available: " + limitEnd);
+				}
 			} else {
 				ErrorUtils.warn(logger,"Synch Manager not available...");
 				synchManager.initializeSynchDriver();

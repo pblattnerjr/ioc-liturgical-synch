@@ -13,6 +13,7 @@ import org.neo4j.driver.v1.Config.ConfigBuilder;
 import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.GraphDatabase;
 import org.neo4j.driver.v1.StatementResult;
+import org.neo4j.driver.v1.summary.Notification;
 import org.neo4j.driver.v1.summary.ResultSummary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +32,8 @@ import org.ocmc.ioc.liturgical.schemas.models.ws.response.RequestStatus;
 import org.ocmc.ioc.liturgical.schemas.models.ws.response.ResultJsonObjectArray;
 import org.ocmc.ioc.liturgical.synch.app.SynchServiceProvider;
 import org.ocmc.ioc.liturgical.synch.constants.Constants;
+import org.ocmc.ioc.liturgical.synch.constants.GITHUB_INITIAL_ARES_URLS;
+import org.ocmc.ioc.liturgical.synch.constants.GITHUB_TEST_ARES_URLS;
 import org.ocmc.ioc.liturgical.synch.exceptions.DbException;
 import org.ocmc.ioc.liturgical.synch.git.AresTransTuple;
 import org.ocmc.ioc.liturgical.schemas.models.ModelHelpers;
@@ -68,13 +71,20 @@ public class SynchManager {
 	private String synchTransLabel = Constants.LABEL_SYNCH_TRANS;
 	private String synchAresTransLabel = Constants.LABEL_SYNCH_ARES_TRANS;
 	private boolean debug = false;
-	
+	public boolean testGitSynch = false;
+	public boolean deleteTestGitRepos = false;
+
 	public SynchManager(
 			  String synchDomain
 			  , String synchPort
 			  , String username
 			  , String password
+			 ,	boolean testGitSynch
+			 ,	boolean deleteTestGitRepos
 			  ) {
+		  this.testGitSynch = testGitSynch;
+		  this.setUseTestRepos(testGitSynch);
+		  this.deleteTestGitRepos = deleteTestGitRepos;
 		  this.synchDomain = synchDomain;
 		  this.synchPort = synchPort;
 		  this.username = username;
@@ -105,8 +115,16 @@ public class SynchManager {
 				  synchDriver = GraphDatabase.driver(synchBoltUrl, AuthTokens.basic(username, password), config);
 				  testSynchConnection();
 				  if (this.synchConnectionOK) {
+					  if (this.testGitSynch) {
+							if (this.deleteTestGitRepos) {
+								  this.deleteTestRepos();
+							}
+			  				this.setGithubRepos(GITHUB_TEST_ARES_URLS.toPOJO());
+					  } else {
+		  					this.setGithubRepos(GITHUB_INITIAL_ARES_URLS.toPOJO());
+					  }
 					  this.githubRepos = this.getGithubSynchInfo();
-				  }
+				 }
 			  } catch (org.neo4j.driver.v1.exceptions.ServiceUnavailableException u) {
 				  this.synchConnectionOK = false;
 				  logger.error("Can't connect to the Neo4j SYNCH database.");
@@ -245,6 +263,7 @@ public class SynchManager {
 					Constants.GithubRepositoriesLibraryTopic
 					, Constants.LABEL_GITHUB_TEST_REPO
 					);
+			logger.info("Deleted test repos...");
 		} catch (Exception e) {
 			ErrorUtils.report(logger, e);
 		}
@@ -351,7 +370,11 @@ public class SynchManager {
 			result.setQuery(query);
 			result = getForQuery(query);
 			if (result.valueCount == 0) {
-				repos = this.githubRepos;
+				if (this.useTestRepos) {
+					repos = GITHUB_TEST_ARES_URLS.toPOJO();
+				} else {
+					repos = GITHUB_INITIAL_ARES_URLS.toPOJO();
+				}
 				this.createGitSynchInfo(repos);
 			} else {
 				for (JsonObject value : result.getValues()) {
@@ -657,10 +680,10 @@ public class SynchManager {
 			return result;
 	}
 
-	public RequestStatus createGitSynchInfo(GithubRepositories doc) throws DbException {
+	public synchronized RequestStatus createGitSynchInfo(GithubRepositories doc) throws DbException {
 		RequestStatus result = new RequestStatus();
 		int count = 0;
-		logger.info("Creating GitSynchInfo for respositories");
+		logger.info("Creating GitSynchInfo for respositories using label " + this.synchInfoLabel);
 		setIdConstraint(this.synchInfoLabel);
 		String query = "create (doc:%s) set doc = {props} return doc";
 		query = String.format(query, this.synchInfoLabel);
@@ -669,16 +692,22 @@ public class SynchManager {
 			try (org.neo4j.driver.v1.Session session = this.synchDriver.session()) {
 				Map<String,Object> props = ModelHelpers.getAsPropertiesMap(repo);
 				StatementResult neoResult = session.run(query, props);
-				summary = neoResult.summary();
+				summary = neoResult.consume();
+				for (Notification n : summary.notifications()) {
+					logger.info(n.code() + " " + n.description());
+				}
 				count = summary.counters().nodesCreated();
 				if (count > 0) {
+					logger.info("Created GitSynchInfo for " + repo.getName());
 			    	result.setCode(HTTP_RESPONSE_CODES.CREATED.code);
 			    	result.setMessage(HTTP_RESPONSE_CODES.CREATED.message);
 				} else {
+					logger.error("Could not create GitSynchInfo doc for " + repo.getName());
 			    	result.setCode(HTTP_RESPONSE_CODES.BAD_REQUEST.code);
 			    	result.setMessage(summary.notifications().toString());
 				}
 			} catch (Exception e){
+				ErrorUtils.report(logger, e);
 				if (e.getMessage().contains("already exists")) {
 					result.setCode(HTTP_RESPONSE_CODES.CONFLICT.code);
 					result.setDeveloperMessage(HTTP_RESPONSE_CODES.CONFLICT.message);

@@ -984,7 +984,7 @@ public class SynchManager {
 		sb.append(doc.id);
 		sb.append("'}) ");
 		sb.append("ON CREATE SET n = {props} ");
-		sb.append("ON MATCH SET n.value = {props.value}, n.comment = {props.comment}, n.modifiedBy = {props.modifiedBy}, n.modifiedWhen = {props.modifiedWhen}, n.dataSource = {props.dataSource} ");
+		sb.append("ON MATCH SET n.value = $props.value, n.comment = $props.comment, n.modifiedBy = $props.modifiedBy, n.modifiedWhen = $props.modifiedWhen, n.dataSource = $props.dataSource ");
 		sb.append("return n");
 		return sb.toString();
 	}

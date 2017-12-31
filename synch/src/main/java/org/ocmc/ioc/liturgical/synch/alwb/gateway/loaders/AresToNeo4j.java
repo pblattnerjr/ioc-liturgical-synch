@@ -1,6 +1,7 @@
 package org.ocmc.ioc.liturgical.synch.alwb.gateway.loaders;
 
 import java.text.Normalizer;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -71,7 +72,7 @@ public class AresToNeo4j {
 		String url = args[2];
 
 		boolean updateDatabaseNodes = false; 
-		boolean updateDatabaseRelationships = false; 
+		boolean updateDatabaseRelationships = true; 
 		boolean useResolvedValues = false; // if true, will be used as read-only database
 		// and, if true, there won't be any relationships between nodes
 		
@@ -165,11 +166,13 @@ public class AresToNeo4j {
 
 					for (LibraryLine line : fileProxy.getValues()) {
 						boolean addToDb = true;
-						if (fileDomain.equals("spa_gt_odg")
-								&& fileTopic.equals("le.ep.me.m11.d24")
-								&& line.getKey().equals("lemeLI.Epistle.version")
-								) {
-							System.out.print("");
+						if (inspectLine) {
+							if (fileDomain.equals("en_us_public")
+									&& fileTopic.equals("actors")
+									&& line.getKey().equals("Candidate_Sponsor")
+									) {
+								System.out.print("");
+							}
 						}
 						if (line.isSimpleKeyValue || line.isRedirect()) {
 							if (useResolvedValues) { // determine whether we will use this with a normalized database
@@ -263,9 +266,9 @@ public class AresToNeo4j {
 								}
 								redirectDomain = redirectDomain.toLowerCase();
 								String redirectId = redirectDomain + Constants.ID_DELIMITER + redirectTopic + Constants.ID_DELIMITER + redirectKey;
-								if (parts.length == 5) {
-									redirectId = redirectId + "_" + parts[4];
-								}
+//								if (parts.length == 5) {
+//									redirectId = redirectId + "_" + parts[4];
+//								}
 								
 								if (theNode.getId().equals(redirectId)) {
 									System.out.println("Points to self: " + line.getLine());
@@ -293,6 +296,10 @@ public class AresToNeo4j {
 								}
 								}
 							if (addToDb) {
+								theNode.setCreatedWhen(Instant.now().toString());
+								theNode.setModifiedWhen(theNode.getCreatedWhen());
+								theNode.setCreatedBy("wsadmin");
+								theNode.setModifiedBy("wsadmin");
 								textsToCreate.add(theNode);
 							}
 						}

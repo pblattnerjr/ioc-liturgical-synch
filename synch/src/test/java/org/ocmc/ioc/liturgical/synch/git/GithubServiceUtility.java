@@ -15,12 +15,12 @@ import org.ocmc.ioc.liturgical.synch.git.models.github.Refs;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 
-public class GithubServiceTest {
+public class GithubServiceUtility {
 
-	static String account = "mcolburn";
-	static String repo = "synch-test";
-//	static String account = "AGES-Initiatives"; // "mcolburn";
-//	static String repo = "ages-alwb-library-gr-gr-cog"; // "synch-test";
+//	static String account = "mcolburn";
+//	static String repo = "synch-test";
+	static String account = "AGES-Initiatives"; // "mcolburn";
+	static String repo = "ages-alwb-library-en-us-dedes"; // "ages-alwb-library-gr-gr-cog"; // "synch-test";
 	static String token = "";
 	
 	static GithubService utils;
@@ -31,53 +31,14 @@ public class GithubServiceTest {
 		utils = new GithubService(token, account, repo);
 	}
 
-	
-	@Test
-	public void testGetRefs() {
-		Refs refs = utils.getBranchRefs();
-//		for (Ref ref : refs.getRefs()) {
-//			ref.setPrettyPrint(true);
-//			System.out.println(ref.toJsonString());
-//		}
-		assertTrue(refs.getRefs().size() > 0);
-	}
-
-	@Test
-	public void testGetMasterSha() {
-		String sha = utils.getMasterSha();
-		assertTrue(sha.length() > 0);
-	}
-
-	@Test
-	public void testGetCommits() {
-		ResultJsonObjectArray result = utils.getCommits();
-		assertTrue(result.valueCount > 0);
-	}
-
-	@Test
-	public void testGetRateLimit() {
-		RateLimit limit = utils.getRateLimit();
-		assertTrue(limit.core.limit == 5000);
-	}
-
-	@Test
-	public void testGetRemainingLimit() {
-		int limit = utils.GetRemainingLimit();
-		assertTrue(limit > 0);
-	}
-
 	@Test
 	public void testGetCommitsAsList() {
-		List<CommitDetails> result = utils.getCommitsAsList();
-		assertTrue(result.size() > 0);
-//		for (CommitDetails d : result) {
-//			System.out.println(d.sha + " " + d.getCommit().committer.date);
-//		}
-		CommitDetails head = result.get(0);
-		CommitDetails parent = result.get(result.size()-3);
+		String fromCommitId = "38e30e4c18259472f0ff453dff2ce00fd781a17c";
+		String toCommitId = "255679e3cf8c26bfbff4546326ed018858e4d8ca";
+		
 		ResultJsonObjectArray getResult = utils.compareCommits(	
-				parent.getSha()
-				, head.getSha()
+				fromCommitId
+				, toCommitId
 				);
 		if (getResult.status.code == 200) {
 			JsonArray values = getResult.getFirstObject().get("files").getAsJsonArray();

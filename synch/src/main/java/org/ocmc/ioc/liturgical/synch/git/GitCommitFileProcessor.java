@@ -280,35 +280,39 @@ public class GitCommitFileProcessor {
 					line = diff.substring(1);
 					try {
 						libLine = new GitDiffLibraryLine(Integer.toString(count),line);
-						libLine.setTimestamp(committerDate);
-						libLine.setWho(committerName);
-						libLine.setPlus(diff.startsWith("+"));
-						if (libLine.hasCommentAfterValue) {
-							if (libLine.getComment().contains("~")) {
-								String [] parts = libLine.getComment().split("~");
-								if (parts.length > 1) {
-									libLine.setRenameKeyFrom(parts[1]);
+						if (libLine.hasError) {
+							logger.info(libLine.domain + "~" + libLine.topic + "~" + libLine.key + " ares line has error");
+						} else {
+							libLine.setTimestamp(committerDate);
+							libLine.setWho(committerName);
+							libLine.setPlus(diff.startsWith("+"));
+							if (libLine.hasCommentAfterValue) {
+								if (libLine.getComment().contains("~")) {
+									String [] parts = libLine.getComment().split("~");
+									if (parts.length > 1) {
+										libLine.setRenameKeyFrom(parts[1]);
+									}
 								}
 							}
+							GitDiffTuple tuple = new GitDiffTuple();
+							if (map.containsKey(libLine.getKey())) {
+								tuple = map.get(libLine.getKey());
+							}
+							if (libLine.isPlus()) {
+								libLine.setDomain(this.libraryTo.toLowerCase());
+								libLine.setTopic(this.topicTo);
+								tuple.setPlus(libLine);
+							} else {
+								libLine.setDomain(this.libraryFrom.toLowerCase());
+								libLine.setTopic(this.topicFrom);
+								libLine.setFromKey(libLine.getKey());
+								libLine.setFromTopic(libLine.getTopic());
+								libLine.setFromLibrary(libLine.getDomain());
+								libLine.setFromValue(libLine.getValue());
+								tuple.setMinus(libLine);
+							}
+							map.put(libLine.getKey(), tuple);
 						}
-						GitDiffTuple tuple = new GitDiffTuple();
-						if (map.containsKey(libLine.getKey())) {
-							tuple = map.get(libLine.getKey());
-						}
-						if (libLine.isPlus()) {
-							libLine.setDomain(this.libraryTo.toLowerCase());
-							libLine.setTopic(this.topicTo);
-							tuple.setPlus(libLine);
-						} else {
-							libLine.setDomain(this.libraryFrom.toLowerCase());
-							libLine.setTopic(this.topicFrom);
-							libLine.setFromKey(libLine.getKey());
-							libLine.setFromTopic(libLine.getTopic());
-							libLine.setFromLibrary(libLine.getDomain());
-							libLine.setFromValue(libLine.getValue());
-							tuple.setMinus(libLine);
-						}
-						map.put(libLine.getKey(), tuple);
 					} catch (Exception e) {
 						ErrorUtils.report(logger, e);
 						libLine = null;
@@ -478,6 +482,9 @@ public class GitCommitFileProcessor {
 					, macAddress
 					, line.getTimestamp() + GeneralUtils.padNumber("s", 4, counter)
 					);
+			if (line.getKey().equals("EnTiKamino.notmetered")) {
+				System.out.print("");
+			}
 			trans.setFromCommitId(this.fromCommitId);
 			trans.setToCommitId(this.toCommitId);
 			trans.setSource(SOURCES.GIT);

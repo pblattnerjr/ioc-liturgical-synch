@@ -3,10 +3,10 @@
   <groupId>org.ocmc.ioc.liturgical</groupId>
   <artifactId>ioc-liturgical-synch</artifactId>
   <versioning>
-    <release>1.0.9</release>
+    <release>1.1.0</release>
     <versions>
-      <version>1.0.9</version>
+      <version>1.1.0</version>
     </versions>
-    <lastUpdated>20180103201214</lastUpdated>
+    <lastUpdated>20180117173722</lastUpdated>
   </versioning>
 </metadata>

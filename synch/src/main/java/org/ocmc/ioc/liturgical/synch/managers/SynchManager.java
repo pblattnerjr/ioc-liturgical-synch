@@ -950,20 +950,24 @@ public class SynchManager {
 	 */
 	private List<String> createDeleteKeyValueQueries(TextLiturgical doc) {
 		List<String> result = new ArrayList<String>();
+		StringBuffer sbFrom = new StringBuffer();
+		StringBuffer sbTo = new StringBuffer();
 		for (String label : doc.fetchOntologyLabelsList()) {
-			StringBuffer sb = new StringBuffer();
-			sb.append("match (n:Root) where n.id = '");
-			sb.append(doc.getId());
-			sb.append("' ");
-			sb.append(
-					CypherUtils.getLabelRenameClause(
-							"n"
-							, label
-							, DELETED_LABEL_PREFIX + label
-							)
-					);
-			result.add(sb.toString());
+			sbFrom.append(label);
+			sbTo.append(DELETED_LABEL_PREFIX + label);
 		}
+		StringBuffer sb = new StringBuffer();
+		sb.append("match (n:Root) where n.id = '");
+		sb.append(doc.getId());
+		sb.append("' ");
+		sb.append(
+				CypherUtils.getLabelRenameClause(
+						"n"
+						, sbFrom.toString()
+						, sbTo.toString()
+						)
+				);
+		result.add(sb.toString());
 		// now add the queries to rename the relationships
 		result.addAll(this.createLiturgicalRelationshipDeleteQueries(doc.getId()));
 		return result;

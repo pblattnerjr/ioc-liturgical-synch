@@ -88,6 +88,8 @@ public class SynchServiceProvider {
     		if (githubToken == null) {
             	githubToken = args[2];
     		}
+    		int githubApiInterval = 60;
+    		
         	SynchManager synchManager = null;
         	
     		try {
@@ -114,10 +116,7 @@ public class SynchServiceProvider {
     			logger.info("debug: " + debug);
     			
     			if (debug) {
-    				try {
-    				} catch (Exception e) {
-    					ErrorUtils.report(logger, e);
-    				}
+    				githubApiInterval = 10;
     			}
     			
     			synchEnabled = toBoolean(synchEnabled, prop.getProperty("synch_enabled"));
@@ -177,7 +176,7 @@ public class SynchServiceProvider {
 									, debug
 									)
 							, 10
-							, 10
+							, githubApiInterval
 							, TimeUnit.SECONDS
 							);
 

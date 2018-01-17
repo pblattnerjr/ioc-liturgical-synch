@@ -71,7 +71,7 @@ public class AresToNeo4j {
 		String pwd = args[1];
 		String url = args[2];
 
-		boolean updateDatabaseNodes = false; 
+		boolean updateDatabaseNodes = true; 
 		boolean updateDatabaseRelationships = true; 
 		boolean useResolvedValues = false; // if true, will be used as read-only database
 		// and, if true, there won't be any relationships between nodes
@@ -90,34 +90,35 @@ public class AresToNeo4j {
 		
 		// Load the ares
 		LibraryProxyManager libProxyManager;
-		String alwbPath = "/Users/mac002/Git/alwb-repositories/ages";
-//		String alwbPath = "/Users/mac002/Git/alwb-repositories/kenya";
+//		String alwbPath = "/Users/mac002/Git/alwb-repositories"; // ages and kenya
+//		String alwbPath = "/Users/mac002/Git/alwb-repositories/ages"; // ages only
+		String alwbPath = "/Users/mac002/Git/alwb-repositories/kenya"; // kenya only
 		List<String> domainsToProcess = new ArrayList<String>();
 		/**
 		 * Add each domain that you want to process
 		 */
-		domainsToProcess.add("en_US_andronache");
-		domainsToProcess.add("en_US_barrett");
-		domainsToProcess.add("en_US_boyer");
-		domainsToProcess.add("en_US_constantinides");
-		domainsToProcess.add("en_US_dedes");
-		domainsToProcess.add("en_US_goa");
-		domainsToProcess.add("en_US_holycross");
-		domainsToProcess.add("en_UK_lash");
-		domainsToProcess.add("en_US_oca");
-		domainsToProcess.add("en_US_public");
-		domainsToProcess.add("en_US_repass");
-		domainsToProcess.add("en_US_unknown");
-		domainsToProcess.add("gr_GR_cog");
+//		domainsToProcess.add("en_US_andronache");
+//		domainsToProcess.add("en_US_barrett");
+//		domainsToProcess.add("en_US_boyer");
+//		domainsToProcess.add("en_US_constantinides");
+//		domainsToProcess.add("en_US_dedes");
+//		domainsToProcess.add("en_US_goa");
+//		domainsToProcess.add("en_US_holycross");
+//		domainsToProcess.add("en_UK_lash");
+//		domainsToProcess.add("en_US_oca");
+//		domainsToProcess.add("en_US_public");
+//		domainsToProcess.add("en_US_repass");
+//		domainsToProcess.add("en_US_unknown");
+//		domainsToProcess.add("gr_GR_cog");
 		
 		// ages scripture
-		domainsToProcess.add("en_UK_kjv");
-		domainsToProcess.add("en_US_eob");
-		domainsToProcess.add("en_US_kjv");
-		domainsToProcess.add("en_US_net");
-		domainsToProcess.add("en_US_nkjv");
-		domainsToProcess.add("en_US_rsv");
-		domainsToProcess.add("en_US_saas");
+//		domainsToProcess.add("en_UK_kjv");
+//		domainsToProcess.add("en_US_eob");
+//		domainsToProcess.add("en_US_kjv");
+//		domainsToProcess.add("en_US_net");
+//		domainsToProcess.add("en_US_nkjv");
+//		domainsToProcess.add("en_US_rsv");
+//		domainsToProcess.add("en_US_saas");
 		
 		// Kenya
 		domainsToProcess.add("kik_KE_oak");
@@ -259,7 +260,7 @@ public class AresToNeo4j {
 									// exists(l.value) and not
 									// (l)-[:VALUE_FROM]->() return l.id,
 									// l.value
-									System.out.println("Redirect key does not exist: " + line.getTopic() + "_" + line.getDomain() + ".ares: " + line.getLine());
+									System.out.println("Redirect key does not exist: " + line.getTopic() + "_" + line.getDomain() + ".ares: " + line.getLine() + " if exists in Github, did you forget to sudo pullAll.sh?");
 									if (useResolvedValues) {
 										addToDb = false;
 									}

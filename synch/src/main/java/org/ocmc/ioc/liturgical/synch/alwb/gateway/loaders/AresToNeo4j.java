@@ -1,10 +1,12 @@
 package org.ocmc.ioc.liturgical.synch.alwb.gateway.loaders;
 
+import java.io.File;
 import java.text.Normalizer;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.regex.Pattern;
 
 import org.neo4j.driver.v1.AuthTokens;
@@ -14,15 +16,19 @@ import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
 import org.ocmc.ioc.liturgical.schemas.constants.Constants;
 import org.ocmc.ioc.liturgical.schemas.constants.HTTP_RESPONSE_CODES;
+import org.ocmc.ioc.liturgical.schemas.constants.STATUS;
 import org.ocmc.ioc.liturgical.schemas.models.ModelHelpers;
 import org.ocmc.ioc.liturgical.schemas.models.db.docs.ontology.TextLiturgical;
 import org.ocmc.ioc.liturgical.schemas.models.supers.LTKDb;
+import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepo;
+import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepositories;
 import org.ocmc.ioc.liturgical.schemas.models.ws.response.RequestStatus;
 import org.ocmc.ioc.liturgical.synch.alwb.gateway.ares.LibraryFileProxy;
 import org.ocmc.ioc.liturgical.synch.alwb.gateway.ares.LibraryLine;
 import org.ocmc.ioc.liturgical.synch.alwb.gateway.ares.LibraryProxyManager;
 import org.ocmc.ioc.liturgical.synch.alwb.gateway.ares.LibraryUtils;
 import org.ocmc.ioc.liturgical.synch.exceptions.DbException;
+import org.ocmc.ioc.liturgical.synch.git.JGitUtils;
 import org.ocmc.ioc.liturgical.utils.ErrorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,8 +77,8 @@ public class AresToNeo4j {
 		String pwd = args[1];
 		String url = args[2];
 
-		boolean updateDatabaseNodes = true; 
-		boolean updateDatabaseRelationships = true; 
+		boolean updateDatabaseNodes = false; 
+		boolean updateDatabaseRelationships = false; 
 		boolean useResolvedValues = false; // if true, will be used as read-only database
 		// and, if true, there won't be any relationships between nodes
 		
@@ -90,35 +96,34 @@ public class AresToNeo4j {
 		
 		// Load the ares
 		LibraryProxyManager libProxyManager;
-//		String alwbPath = "/Users/mac002/Git/alwb-repositories"; // ages and kenya
-//		String alwbPath = "/Users/mac002/Git/alwb-repositories/ages"; // ages only
-		String alwbPath = "/Users/mac002/Git/alwb-repositories/kenya"; // kenya only
+		String alwbPath = "/Users/mac002/Git/alwb-repositories/ages"; // ages only
+//		String alwbPath = "/Users/mac002/Git/alwb-repositories/kenya"; // kenya only
 		List<String> domainsToProcess = new ArrayList<String>();
 		/**
 		 * Add each domain that you want to process
 		 */
-//		domainsToProcess.add("en_US_andronache");
-//		domainsToProcess.add("en_US_barrett");
-//		domainsToProcess.add("en_US_boyer");
-//		domainsToProcess.add("en_US_constantinides");
-//		domainsToProcess.add("en_US_dedes");
-//		domainsToProcess.add("en_US_goa");
-//		domainsToProcess.add("en_US_holycross");
-//		domainsToProcess.add("en_UK_lash");
-//		domainsToProcess.add("en_US_oca");
-//		domainsToProcess.add("en_US_public");
-//		domainsToProcess.add("en_US_repass");
-//		domainsToProcess.add("en_US_unknown");
-//		domainsToProcess.add("gr_GR_cog");
+		domainsToProcess.add("en_US_andronache");
+		domainsToProcess.add("en_US_barrett");
+		domainsToProcess.add("en_US_boyer");
+		domainsToProcess.add("en_US_constantinides");
+		domainsToProcess.add("en_US_dedes");
+		domainsToProcess.add("en_US_goa");
+		domainsToProcess.add("en_US_holycross");
+		domainsToProcess.add("en_UK_lash");
+		domainsToProcess.add("en_US_oca");
+		domainsToProcess.add("en_US_public");
+		domainsToProcess.add("en_US_repass");
+		domainsToProcess.add("en_US_unknown");
+		domainsToProcess.add("gr_GR_cog");
 		
 		// ages scripture
-//		domainsToProcess.add("en_UK_kjv");
-//		domainsToProcess.add("en_US_eob");
-//		domainsToProcess.add("en_US_kjv");
-//		domainsToProcess.add("en_US_net");
-//		domainsToProcess.add("en_US_nkjv");
-//		domainsToProcess.add("en_US_rsv");
-//		domainsToProcess.add("en_US_saas");
+		domainsToProcess.add("en_UK_kjv");
+		domainsToProcess.add("en_US_eob");
+		domainsToProcess.add("en_US_kjv");
+		domainsToProcess.add("en_US_net");
+		domainsToProcess.add("en_US_nkjv");
+		domainsToProcess.add("en_US_rsv");
+		domainsToProcess.add("en_US_saas");
 		
 		// Kenya
 		domainsToProcess.add("kik_KE_oak");
@@ -138,6 +143,14 @@ public class AresToNeo4j {
 		 * between nodes where one node's value points to another node.
 		 */
 		List<String> redirectQueries = new ArrayList<String>();
+
+		// Update the local repos
+		GithubRepositories repos = JGitUtils.getRepositories(alwbPath);
+		Map<String, GithubRepo> repoMap = new TreeMap<String, GithubRepo>();
+		for (GithubRepo repo : repos.getRepos()) {
+			File f = new File(repo.localRepoPath);
+			repoMap.put(f.getParent(), repo);
+		}
 
 		/**
 		 * Now read in all the ares files...
@@ -159,12 +172,21 @@ public class AresToNeo4j {
 		// If the node that is pointed to does not exist, it will not be
 		// created.
 		int count = 0;
+		String repoKey = "";
 		try (Driver driver = GraphDatabase.driver("bolt://" + url, AuthTokens.basic(user, pwd))) {
 			try (Session session = driver.session()) {
 				for (LibraryFileProxy fileProxy : libProxyManager.getLoadedFiles().values()) {
 					String fileDomain = fileProxy.getDomain().toLowerCase();
 					String fileTopic = fileProxy.getTopic();
-
+					repoKey = "";
+					for (String s : repoMap.keySet()) {
+						if (fileProxy.getResourcePath().startsWith(s)) {
+							GithubRepo r = repoMap.get(s);
+							r.setStatus(STATUS.READY_TO_RELEASE);
+							repoMap.put(s,  r);
+							repoKey = s;
+						}
+					}
 					for (LibraryLine line : fileProxy.getValues()) {
 						boolean addToDb = true;
 						if (inspectLine) {
@@ -274,6 +296,7 @@ public class AresToNeo4j {
 								if (theNode.getId().equals(redirectId)) {
 									System.out.println("Points to self: " + line.getLine());
 								} else {
+									theNode.setRedirectId(redirectId);
 									String nodeRedirect = getRedirectCypherTo(
 											theNode.getId()
 											, theNode.getOntologyTopic().label
@@ -306,7 +329,16 @@ public class AresToNeo4j {
 						}
 					}
 				}
-
+				if (repoKey.length() > 0) {
+					GithubRepo r = repoMap.get(repoKey);
+					r.setStatus(STATUS.RELEASED);
+					repoMap.put(repoKey, r);
+					try {
+						recordPull(session, r);
+					} catch (DbException e) {
+						ErrorUtils.report(logger, e);
+					}
+				}
 				System.out.println(textsToCreate.size() + " create queries prepared...");
 				if (updateDatabaseNodes) {
 					System.out.println("Creating " + textsToCreate.size() + " nodes...");
@@ -398,6 +430,38 @@ public class AresToNeo4j {
 		return result;
 	}
 
+	public static RequestStatus recordPull(Session session, GithubRepo doc) throws DbException {
+		RequestStatus result = new RequestStatus();
+		int count = 0;
+		List<String> labels = new ArrayList<String>();
+		labels.add("Root");
+		labels.add("GithubRepo");
+		setIdConstraints(session, labels);
+		String query = "create (n:Root:GithubRepo" + ") set n = {props} return n";
+		try {
+			Map<String,Object> props = ModelHelpers.getAsPropertiesMap(doc);
+				StatementResult neoResult = session.run(query, props);
+				count = neoResult.consume().counters().nodesCreated();
+				if (count > 0) {
+			    	result.setCode(HTTP_RESPONSE_CODES.CREATED.code);
+			    	result.setMessage(HTTP_RESPONSE_CODES.CREATED.message + ": created " + doc.getId());
+				} else {
+			    	result.setCode(HTTP_RESPONSE_CODES.BAD_REQUEST.code);
+			    	result.setMessage(HTTP_RESPONSE_CODES.BAD_REQUEST.message + "  " + doc.getId());
+				}
+		} catch (Exception e){
+			if (e.getMessage().contains("already exists")) {
+				result.setCode(HTTP_RESPONSE_CODES.CONFLICT.code);
+				result.setDeveloperMessage(HTTP_RESPONSE_CODES.CONFLICT.message);
+			} else {
+				result.setCode(HTTP_RESPONSE_CODES.BAD_REQUEST.code);
+				result.setDeveloperMessage(HTTP_RESPONSE_CODES.BAD_REQUEST.message);
+			}
+			result.setUserMessage(e.getMessage());
+		}
+		return result;
+	}
+
 	public static void setIdConstraints(Session session, List<String> labels) {
 		try {
 			for (String label : labels) {
@@ -426,6 +490,14 @@ public class AresToNeo4j {
 				ErrorUtils.report(logger, e);
 			}
 		return neoResult;
+	}
+	
+	private static List<File> gitRepos(String path) {
+		List<File> result = new ArrayList<File>();
+		for (File f :  org.ocmc.ioc.liturgical.utils.FileUtils.getFilesFromSubdirectories(path, ".git")) {
+			result.add(f);
+		}
+		return result;
 	}
 
 }

@@ -366,6 +366,7 @@ public class GitCommitFileProcessor {
 				line.setFromTopic(minus.getTopic());
 				line.setFromKey(minus.getKey());
 				line.setFromValue(minus.getValue());
+				line.setFromValueIsRedirect(minus.isRedirect());
 				line.setFromComment(minus.getComment());
 				this.updateMap.put(line.getKey(), line);
 				break;
@@ -493,10 +494,12 @@ public class GitCommitFileProcessor {
 			trans.setFromTopic(line.getFromTopic());
 			trans.setFromKey(line.getFromKey());
 			trans.setFromValue(line.getFromValue());
+			trans.setFromValueIsRedirect(line.fromValueIsRedirect);
 			trans.setToLibrary(line.getDomain());
 			trans.setToKey(line.getKey());
 			trans.setToTopic(line.getTopic());
 			trans.setToValue(line.getValue());
+			trans.setToValueIsRedirect(line.isRedirect());
 			trans.setToComment(line.getComment());
 			trans.setType(type);
 			trans.setVisibility(VISIBILITY.PRIVATE);
@@ -550,10 +553,12 @@ public class GitCommitFileProcessor {
 					+ line.getValue().getFromKey() 
 					+ "."
 	                + line.getValue().getFromValue()
+	                + (line.getValue().fromValueIsRedirect ? " (redirect) " : "")
 					+ " => "
 					+ line.getValue().getKey() 
 					+ "."
 	                + line.getValue().getValue()
+	                + (line.getValue().isRedirect() ? " (redirect) " : "")
 					);
 		}
 		System.out.println("Update Map");

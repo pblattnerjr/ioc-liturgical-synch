@@ -12,6 +12,9 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.filefilter.DirectoryFileFilter;
+import org.apache.commons.io.filefilter.NotFileFilter;
+import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.eclipse.jgit.api.CreateBranchCommand.SetupUpstreamMode;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.LogCommand;
@@ -33,6 +36,7 @@ import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepo;
 import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepositories;
 import org.ocmc.ioc.liturgical.synch.git.models.GitDiffEntry;
 import org.ocmc.ioc.liturgical.synch.git.models.GitStatus;
+import org.ocmc.ioc.liturgical.utils.ApacheFileUtils;
 import org.ocmc.ioc.liturgical.utils.ErrorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -121,19 +125,15 @@ public class JGitUtils {
 				Path path = Paths.get(baseDir, repo.name);
 				repoDir = path.toFile();
 				if (repoDir.exists()) {
-//					logger.info("pulling " + repo.key);
 					pullRepository(repo, path.toString());
 					if (repo.lastGitToDbSynchCommitId.equals(repo.lastGitToDbFetchCommitId)) {
 						status.addUnchanged(repo);
 					} else {
 						status.addUpdated(repo);
 					}
-//					printGitRepo(repo);
 				} else {
-//					logger.info("cloning " + repo.key);
 					cloneRepository(repo, baseDir);
 					status.addCloned(repo);
-//					printGitRepo(repo);
 				}
 			} catch (Exception e) {
 				ErrorUtils.report(logger, e);
@@ -150,6 +150,7 @@ public class JGitUtils {
 		    git = new Git(repository);
 		    git.pull().call();
 		    setRepoFetchInfo(repo, repository.getDirectory().getPath());
+		    git.clean().setCleanDirectories(true).call();
 		} catch (Exception e) {
 			ErrorUtils.report(logger, e);
 		}
@@ -421,6 +422,38 @@ public class JGitUtils {
 		repo.setLastGitToDbFetchTime(Instant.now().toString());
 		repo.setLastGitToDbFetchCommitId(getHeadCommitName(path));
 		repo.setLocalRepoPath(path);
+	}
+	
+	public static GithubRepositories getRepositories(String path) {
+		GithubRepositories githubRepos = new GithubRepositories();
+		try {
+			for (File f :  ApacheFileUtils.listFilesAndDirs(
+					new File(path)
+					, new NotFileFilter(TrueFileFilter.INSTANCE)
+					, DirectoryFileFilter.DIRECTORY)) {
+				if (f.getName().startsWith(".git")) {
+					Repository repository;
+					try {
+						repository = new FileRepository(f.getAbsoluteFile());
+						String url = repository.getConfig().getString( "remote", "origin", "url" );
+						String [] parts = url.split("/");
+						String account = parts[parts.length-2];
+						String repoName = parts[parts.length-1];
+						repoName = repoName.substring(0, repoName.length()-4);
+						GithubRepo repo = new GithubRepo(account, repoName);
+						repo.setUrl(url);
+						repo.setLocalRepoPath(f.getAbsolutePath());
+						githubRepos.addRepo(repo);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+			}
+			updateAresGithubRepos(githubRepos, path);
+		} catch (Exception e) {
+			ErrorUtils.report(logger, e);
+		}
+		return githubRepos;
 	}
 
 	public static ObjectId getHeadCommitId(String repPath) {

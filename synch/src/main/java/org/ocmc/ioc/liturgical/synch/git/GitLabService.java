@@ -35,10 +35,11 @@ import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.JsonNode;
 import com.mashape.unirest.http.Unirest;
 
-public class GithubService {
-	private static final Logger logger = LoggerFactory.getLogger(GithubService.class);
+public class GitLabService {
+	private static final Logger logger = LoggerFactory.getLogger(GitLabService.class);
 	private static Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 	private static JsonParser parser = new JsonParser();
+	
 	public static final String urlDomain = "https://api.github.com/repos/%s/%s/";
 	public static final String urlCommits = urlDomain + "commits";
 	public static final String urlCommitMaster = urlDomain + "commits/master";
@@ -53,7 +54,7 @@ public class GithubService {
 	private String account = "";
 	private String repo = "";
 
-	public GithubService(
+	public GitLabService(
 			String token
 			, String account
 			, String repo

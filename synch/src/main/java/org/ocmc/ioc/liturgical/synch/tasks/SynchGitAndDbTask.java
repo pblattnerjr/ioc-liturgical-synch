@@ -13,7 +13,6 @@ import java.util.List;
 import org.ocmc.ioc.liturgical.schemas.models.synch.AresTransaction;
 import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepo;
 import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepositories;
-import org.ocmc.ioc.liturgical.schemas.models.synch.Transaction;
 import org.ocmc.ioc.liturgical.schemas.models.ws.response.ResultJsonObjectArray;
 import org.ocmc.ioc.liturgical.synch.constants.GITHUB_INITIAL_ARES_URLS;
 import org.ocmc.ioc.liturgical.synch.git.GitCommitFileProcessor;

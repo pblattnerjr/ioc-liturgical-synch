@@ -30,6 +30,8 @@ import org.ocmc.ioc.liturgical.schemas.constants.STATUS;
 import org.ocmc.ioc.liturgical.schemas.id.managers.IdManager;
 import org.ocmc.ioc.liturgical.schemas.models.ws.response.RequestStatus;
 import org.ocmc.ioc.liturgical.schemas.models.ws.response.ResultJsonObjectArray;
+import org.ocmc.ioc.liturgical.synch.alwb.gateway.ares.LibraryLine;
+import org.ocmc.ioc.liturgical.synch.alwb.gateway.loaders.AresToNeo4j;
 import org.ocmc.ioc.liturgical.synch.app.SynchServiceProvider;
 import org.ocmc.ioc.liturgical.synch.constants.Constants;
 import org.ocmc.ioc.liturgical.synch.constants.GITHUB_INITIAL_ARES_URLS;
@@ -264,6 +266,16 @@ public class SynchManager {
 					, Constants.LABEL_GITHUB_TEST_REPO
 					);
 			logger.info("Deleted test repos...");
+			status = this.deleteWhereStartsWith(
+					Constants.LIBRARY_SYNCH
+					, Constants.LABEL_SYNCH_TEST_ARES_TRANS
+					);
+			logger.info("Deleted test AresTransaction(s)...");
+			status = this.deleteWhereStartsWith(
+					Constants.LIBRARY_SYNCH
+					, Constants.LABEL_SYNCH_TEST_TRANS
+					);
+			logger.info("Deleted test Transaction(s)...");
 		} catch (Exception e) {
 			ErrorUtils.report(logger, e);
 		}
@@ -874,7 +886,11 @@ public class SynchManager {
 					, ares.toTopic
 					, ares.toKey
 					);
-			doc.setValue(ares.toValue);
+			if (ares.toValueIsRedirect) {
+				doc.setRedirectId(this.alwbIdToDbId(ares.toValue));
+			} else {
+				doc.setValue(ares.toValue);
+			}
 			doc.setComment(ares.toComment);
 			doc.setCreatedBy(ares.getRequestingUser());
 			doc.setCreatedWhen(Instant.now().toString());
@@ -882,11 +898,20 @@ public class SynchManager {
 			doc.setModifiedWhen(doc.getCreatedWhen());
 			doc.setDataSource(DATA_SOURCES.GITHUB);
 			List<String> queries = new ArrayList<String>();
+			List<String> redirectQueries = new ArrayList<String>();
 
 			switch (ares.type) {
 			case ADD_KEY_VALUE:
 				query = this.createMergeNodeQuery(doc);
 				queries.add(query);
+				if (ares.toValueIsRedirect) {
+					redirectQueries.add(this.getRedirectCypherTo(
+							doc.getId()
+							, "Liturgical"
+							, doc.getRedirectId()
+							)
+					);
+				}
 				break;
 			case CHANGE_OF_KEY:
 				queries.addAll(this.createRenameKeyQueries(doc));
@@ -905,6 +930,22 @@ public class SynchManager {
 			case CHANGE_OF_VALUE: // treat same as ADD_KEY_VALUE
 				query = this.createMergeNodeQuery(doc);
 				queries.add(query);
+				if (ares.toValueIsRedirect) {
+					redirectQueries.add(this.getRedirectCypherTo(
+							doc.getId()
+							, "Liturgical"
+							, doc.getRedirectId()
+							)
+					);
+				}
+				if (ares.fromValueIsRedirect) {
+					redirectQueries.add(this.getDeleteRedirectCypher(
+							doc.getId()
+							, "Liturgical"
+							, doc.getRedirectId()
+							)
+					);
+				}
 				break;
 			case DELETE_KEY_VALUE:
 				// TODO: soft delete of relationships and linked nodes
@@ -919,6 +960,9 @@ public class SynchManager {
 				break;
 			}
 			if (queries.size() > 0) {
+				if (redirectQueries.size() > 0) {
+					queries.addAll(redirectQueries);
+				}
 				for (String theQuery : queries) {
 					Transaction transaction = new Transaction(
 							theQuery
@@ -942,6 +986,69 @@ public class SynchManager {
 		return status;
 	}
 	
+	/**
+	 * 
+	 * @param id the id
+	 * @param label the label
+	 * @param redirectId the id to redirect to
+	 * @return a Cypher query to create a POINTS_TO relationship from this node to the node of the redirectId
+	 */
+	private String getRedirectCypherTo(
+			String id
+			, String label
+			, String redirectId
+			) {
+		return "MATCH (d:" + label + " {id:'" + id + "'}), (t:"
+				+ label + " {id:'" + redirectId + "'}) CREATE (d)-[:VALUE_FROM]->(t) return d";
+	}
+
+	private String alwbIdToDbId(String alwbId) {
+		//                                         0         1     2       3
+		// sample ALWB ID = actors_en_US_dedes.Reader
+		StringBuffer result = new StringBuffer();
+		String[] parts = alwbId.split("_");
+		if (parts.length == 4) {
+			String [] keyParts = parts[3].split("\\.");
+			if (keyParts.length > 1) {
+				String redirectLibrary = "";
+				String redirectTopic = "";
+				String redirectKey = "";
+				redirectLibrary = redirectLibrary.toLowerCase();
+				result.append(parts[1]);
+				result.append("_");
+				result.append(parts[2].toLowerCase());
+				result.append("_");
+				result.append(keyParts[0]);
+				result.append(Constants.ID_DELIMITER);
+				result.append(parts[0]);
+				result.append(Constants.ID_DELIMITER);
+				int keyPartsLength = keyParts.length;
+				StringBuffer key = new StringBuffer();
+				for (int i = 1; i < keyPartsLength; i++) {
+					if (key.length() > 0) {
+						key.append(".");
+					}
+					key.append(keyParts[i]);
+				}
+				result.append(key.toString());
+			} else {
+				logger.warn("SynchManager.alwbIdToDbId() could not parse ID: " + alwbId);
+			}
+		} else {
+			logger.warn("SynchManager.alwbIdToDbId() could not parse ID: " + alwbId);
+		}
+		return result.toString();
+	}
+
+	private String getDeleteRedirectCypher(
+			String id
+			, String label
+			, String redirectId
+			) {
+		return "MATCH (d:" + label + " {id:'" + id + "'})-[r:VALUE_FROM]->(t:"
+				+ label + " {id:'" + redirectId + "'}) delete r return d";
+	}
+
 	/**
 	 * Rather than actually delete a doc, we will rename all its labels by
 	 * prefixing them with DELETED_

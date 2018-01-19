@@ -16,6 +16,7 @@ public class GitDiffLibraryLine extends LibraryLine {
 	@Expose public String fromTopic = "";
 	@Expose public String fromKey = "";
 	@Expose public String fromValue = "";
+	@Expose public boolean fromValueIsRedirect = false;
 	@Expose public String fromComment = "";
 	@Expose public boolean isFileDelete = false;
 	@Expose public String timestamp = "";
@@ -128,6 +129,14 @@ public class GitDiffLibraryLine extends LibraryLine {
 
 	public void setFromComment(String fromComment) {
 		this.fromComment = fromComment;
+	}
+
+	public boolean isFromValueIsRedirect() {
+		return fromValueIsRedirect;
+	}
+
+	public void setFromValueIsRedirect(boolean fromValueIsRedirect) {
+		this.fromValueIsRedirect = fromValueIsRedirect;
 	}
 
 }

@@ -1060,7 +1060,13 @@ public class SynchManager {
 		StringBuffer sbFrom = new StringBuffer();
 		StringBuffer sbTo = new StringBuffer();
 		for (String label : doc.fetchOntologyLabelsList()) {
+			if (sbFrom.length() > 0) {
+				sbFrom.append(":");
+			}
 			sbFrom.append(label);
+			if (sbTo.length() > 0) {
+				sbTo.append(":");
+			}
 			sbTo.append(DELETED_LABEL_PREFIX + label);
 		}
 		StringBuffer sb = new StringBuffer();

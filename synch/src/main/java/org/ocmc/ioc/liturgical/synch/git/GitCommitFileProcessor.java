@@ -274,7 +274,7 @@ public class GitCommitFileProcessor {
 			String line = "";
 			GitDiffLibraryLine libLine = null;
 			if (diff.length() > 1 && (diff.startsWith("+") || diff.startsWith("-"))) {
-				if (diff.startsWith("+A_Resource_Whose_Name =") || diff.startsWith("-A_Resource_Whose_Name =")) {
+				if (diff.startsWith("-\r") || diff.startsWith("+A_Resource_Whose_Name =") || diff.startsWith("-A_Resource_Whose_Name =")) {
 					// ignore
 				} else {
 					line = diff.substring(1);
@@ -483,9 +483,6 @@ public class GitCommitFileProcessor {
 					, macAddress
 					, line.getTimestamp() + GeneralUtils.padNumber("s", 4, counter)
 					);
-			if (line.getKey().equals("EnTiKamino.notmetered")) {
-				System.out.print("");
-			}
 			trans.setFromCommitId(this.fromCommitId);
 			trans.setToCommitId(this.toCommitId);
 			trans.setSource(SOURCES.GIT);

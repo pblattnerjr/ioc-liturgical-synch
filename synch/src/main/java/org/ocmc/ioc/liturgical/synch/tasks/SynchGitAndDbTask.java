@@ -40,6 +40,9 @@ public class SynchGitAndDbTask implements Runnable {
 	boolean printpretty = false;
 	String token = "synchrepos";
 	boolean debug = false;
+	boolean overRideLastFetchCommitId = true;
+	String overRideSynchCommitId = "03a4a2dbbc6edd41eff817fd15c3c66b39aa04ad";
+	String overRideFetchCommitId = "f497d10eeb045a998b1cbff3414e765930b0a096";
 	
 	public SynchGitAndDbTask (
 			SynchManager synchManager
@@ -95,13 +98,17 @@ public class SynchGitAndDbTask implements Runnable {
 				
 				for (GithubRepo repo : repos.getRepos()) {
 					if (this.debug) {
+						if (overRideLastFetchCommitId) {
+							repo.setLastGitToDbSynchCommitId(overRideSynchCommitId);
+							repo.setLastGitToDbFetchCommitId(overRideFetchCommitId);
+						}
 						logger.info("fCommitId = " + repo.lastGitToDbFetchCommitId);
 						logger.info("sCommitId = " + repo.lastGitToDbSynchCommitId);
 					}
 					if (
 							(repo.lastGitToDbFetchCommitId.length() > 0 && repo.lastGitToDbSynchCommitId.length() > 0)
-						&& (repo.lastGitToDbSynchCommitId.equals(repo.lastGitToDbFetchCommitId)))
-					{
+						&& (repo.lastGitToDbSynchCommitId.equals(repo.lastGitToDbFetchCommitId))
+						){
 						this.logMessage(repo.getName(), "is current");
 					} else {
  						githubService = new GithubService(

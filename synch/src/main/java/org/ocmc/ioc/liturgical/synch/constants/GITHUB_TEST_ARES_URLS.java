@@ -1,12 +1,12 @@
 package org.ocmc.ioc.liturgical.synch.constants;
 
-import org.apache.commons.io.FilenameUtils;
 import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepo;
 import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepositories;
 import org.ocmc.ioc.liturgical.utils.ErrorUtils;
 
 public enum GITHUB_TEST_ARES_URLS {
-	EN_US_COLBURN("https://github.com/mcolburn/synch-test.git")
+//	EN_US_COLBURN("https://github.com/mcolburn/synch-test.git")
+	EN_US_ANDRONACHE("https://github.com/AGES-Initiatives/ages-alwb-library-en-us-andronache.git")
 	;
 	
 	public String account = "";

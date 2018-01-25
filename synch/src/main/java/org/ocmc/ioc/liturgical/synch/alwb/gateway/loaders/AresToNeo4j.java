@@ -77,8 +77,8 @@ public class AresToNeo4j {
 		String pwd = args[1];
 		String url = args[2];
 
-		boolean updateDatabaseNodes = false; 
-		boolean updateDatabaseRelationships = false; 
+		boolean updateDatabaseNodes = true; 
+		boolean updateDatabaseRelationships = true; 
 		boolean useResolvedValues = false; // if true, will be used as read-only database
 		// and, if true, there won't be any relationships between nodes
 		

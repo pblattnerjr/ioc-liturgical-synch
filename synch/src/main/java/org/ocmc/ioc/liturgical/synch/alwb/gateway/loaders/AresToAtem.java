@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 
@@ -37,34 +38,15 @@ import org.slf4j.LoggerFactory;
 public class AresToAtem {
 	private static final Logger logger = LoggerFactory
 			.getLogger(AresToAtem.class);
-
-	private static List<String> constraints = new ArrayList<String>();
-
-	private static void pullFromGitHub(String rootPath) {
-		
-	}
 	
 	public static void main(String[] args) {
 
-		boolean updateDatabaseNodes = true; 
-		boolean useResolvedValues = true; // if true, will be used as read-only database
-		// and, if true, there won't be any relationships between nodes
-		
-		boolean includeComment = true;
-		boolean inspectLine = true; // if true, you can set a breakpoint for
-										// when it matches idOfLineToInspect
-		String idOfLineToInspect = "en_uk_lash~me.m01.d01~meHO.note1";
-		String idSeparator = "~";
-		Pattern punctPattern = Pattern.compile("[˙·,.;!?(){}\\[\\]<>%]"); // punctuation 
-		
-		int valuesWithText = 0;
-		int valuesWithIds = 0;
-		int valuesWithNothing = 0;
-		int pointsToSelf = 0;
-		
 		// Load the ares
 		LibraryProxyManager libProxyManager;
-		String alwbPath = "/Users/mac002/git/ages/ares/dcs";
+		String alwbPath = "/Users/mac002/git/ages/ares/dcs/ages-alwb-library-gr-gr-cog/net.ages.liturgical.workbench.library_gr_GR_cog/Books-Collections";
+		String pathOut = "/Users/mac002/temp/";
+		File out = new File(pathOut);
+		out.mkdirs();
 		List<String> domainsToProcess = new ArrayList<String>();
 		domainsToProcess.add("gr_GR_cog");
 		System.out.println("Loading Ares files...");
@@ -72,31 +54,88 @@ public class AresToAtem {
 		libProxyManager.loadAllLibraryFiles(domainsToProcess);
 		for (LibraryFileProxy fileProxy : libProxyManager.getLoadedFiles().values()) {
 			String resource = fileProxy.getResourceName(); // actors_gr_GR_cog
-			if (resource.startsWith("me.")) {
+			if (resource.startsWith("me.") || resource.startsWith("tr.") ) {
+				System.out.println(resource);
+				String [] parts = resource.split("_");
+				String resourceTopic = parts[0];
+				parts = resourceTopic.split("\\.");
+				if (resource.startsWith("me.")) {
+					out = new File(pathOut + "/" + parts[0] + "/" + parts[1] + "/" + parts[2]);
+				} else {
+					out = new File(pathOut + "/" + parts[0] + "/" + parts[1]);
+					
+				}
+				out.mkdirs();
 				StringBuffer fileLines = new StringBuffer();
+				fileLines.append("Template ");
+				fileLines.append(resourceTopic);
+				fileLines.append("\n\nStatus Final\n\n");
 				List<String> topics = new ArrayList<String>();
 				StringBuffer sids = new StringBuffer();
-				for (LibraryLine line : fileProxy.getValues()) {
-					if (line.isSimpleKeyValue || line.valueIsKey) {
+				for (Entry<String, String> entry : fileProxy.linesByLineNbr.entrySet()) {
+					LibraryLine line = fileProxy.getLibraryLine(entry.getValue());
+					String key = line.getKey();
+					if (line.isSimpleKeyValue || line.valueIsKey && (! key.contains("Resource_Whose_Name"))) {
+						String tag = "Para sid ";
+						String endTag = " End-Para";
+						if (
+								key.startsWith("meVE")
+								 ||	key.startsWith("meCO")
+								 ||	key.startsWith("meMA")
+								 ||	key.startsWith("meH1")
+								 ||	key.startsWith("meH3")
+								 ||	key.startsWith("meH6")
+								 ||	key.startsWith("meH9")
+								 ||	key.startsWith("meSV")
+								 ||	key.startsWith("trSV")
+								 ||	key.startsWith("peSV")
+								) {
+							if (key.endsWith(".poet")
+									) {
+								tag = "Title<inr>sid ";
+								endTag = " End-Title";
+							} else if (key.endsWith(".ode")) {
+								tag = "Title<Tdesig> sid ";
+								endTag = " End-Title";
+							} else if (key.endsWith(".mode")) {
+								tag = "Title<Tmode> sid ";
+								endTag = " End-Title";
+							} else if (key.endsWith(".melody")) {
+								tag = "Title<Tmelody> sid ";
+								endTag = " End-Title";
+							} else if (key.endsWith(".text")) {
+								tag = "Hymn sid ";
+								endTag = " End-Hymn\n";
+							} else {
+								tag = "Para sid ";
+								endTag = " End-Para";
+							}
+						}
 						// need to handle valuesIsKey
 						if (! topics.contains(line.getTopic())) {
 							topics.add(line.getTopic());
 						}
-						sids.append("Para sid ");
+						sids.append(tag);
 						sids.append(line.getKey());
-						sids.append(" End-para");
+						sids.append(endTag);
+						sids.append("\n");
+					} else {
 						sids.append("\n");
 					}
 				}
 				for (String topic : topics) {
 					fileLines.append("import ");
 					fileLines.append(topic);
-					fileLines.append("_gr_GR_cog.*;\n");
+					fileLines.append("_gr_GR_cog.*\n");
 				}
+				fileLines.append("\n");
 				fileLines.append(sids.toString());
-				System.out.println(fileLines.toString());
+				fileLines.append("\nEnd-Template");
+				out = new File(out.getAbsolutePath() + "/" + resource + ".atem");
+				org.ocmc.ioc.liturgical.utils.FileUtils.writeFile(out.getAbsolutePath(), fileLines.toString());
 			}
 		}
+		System.out.println("Done...");
 	}
 
 }

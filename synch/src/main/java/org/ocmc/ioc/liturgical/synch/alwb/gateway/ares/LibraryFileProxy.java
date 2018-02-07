@@ -40,7 +40,7 @@ public class LibraryFileProxy  {
 	private HashMap<String,LibraryLine> linesByKey = new HashMap<String,LibraryLine>();
 	// This map uses the Line number.  We only need it when writing out the file.
 	// This allows us to preserve the order of the lines.
-	private TreeMap<String,String> linesByLineNbr = new TreeMap<String,String>();
+	public TreeMap<String,String> linesByLineNbr = new TreeMap<String,String>();
 	private FileNameParts fileNameParts;
 	int lineCount = 0;
 		

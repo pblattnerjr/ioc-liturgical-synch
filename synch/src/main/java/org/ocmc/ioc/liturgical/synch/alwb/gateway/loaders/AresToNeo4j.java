@@ -69,13 +69,13 @@ public class AresToNeo4j {
 	/**
 	 * Program to load a neo4j database from ares files.
 	 * 
-	 * @param args the args
+	 * @param args the username and password for the database to be loaded
 	 */
 	public static void main(String[] args) {
 
 		String user = args[0];
 		String pwd = args[1];
-		String url = args[2];
+		String url = "159.203.89.233:7687";
 
 		boolean updateDatabaseNodes = true; 
 		boolean updateDatabaseRelationships = true; 
@@ -96,42 +96,42 @@ public class AresToNeo4j {
 		
 		// Load the ares
 		LibraryProxyManager libProxyManager;
-		String alwbPath = "/Users/mac002/Git/alwb-repositories/ages"; // ages only
-//		String alwbPath = "/Users/mac002/Git/alwb-repositories/kenya"; // kenya only
+//		String alwbPath = "/Users/mac002/Git/alwb-repositories/ages"; // ages only
+		String alwbPath = "/Users/mac002/Git/alwb-repositories/kenya"; // kenya only
 		List<String> domainsToProcess = new ArrayList<String>();
 		/**
 		 * Add each domain that you want to process
 		 */
-		domainsToProcess.add("en_US_andronache");
-		domainsToProcess.add("en_US_barrett");
-		domainsToProcess.add("en_US_boyer");
-		domainsToProcess.add("en_US_constantinides");
-		domainsToProcess.add("en_US_dedes");
-		domainsToProcess.add("en_US_goa");
-		domainsToProcess.add("en_US_holycross");
-		domainsToProcess.add("en_UK_lash");
-		domainsToProcess.add("en_US_oca");
-		domainsToProcess.add("en_US_public");
-		domainsToProcess.add("en_US_repass");
-		domainsToProcess.add("en_US_unknown");
-		domainsToProcess.add("gr_GR_cog");
+//		domainsToProcess.add("en_US_andronache");
+//		domainsToProcess.add("en_US_barrett");
+//		domainsToProcess.add("en_US_boyer");
+//		domainsToProcess.add("en_US_constantinides");
+//		domainsToProcess.add("en_US_dedes");
+//		domainsToProcess.add("en_US_goa");
+//		domainsToProcess.add("en_US_holycross");
+//		domainsToProcess.add("en_UK_lash");
+//		domainsToProcess.add("en_US_oca");
+//		domainsToProcess.add("en_US_public");
+//		domainsToProcess.add("en_US_repass");
+//		domainsToProcess.add("en_US_unknown");
+//		domainsToProcess.add("gr_GR_cog");
 		
 		// ages scripture
-		domainsToProcess.add("en_UK_kjv");
-		domainsToProcess.add("en_US_eob");
-		domainsToProcess.add("en_US_kjv");
-		domainsToProcess.add("en_US_net");
-		domainsToProcess.add("en_US_nkjv");
-		domainsToProcess.add("en_US_rsv");
-		domainsToProcess.add("en_US_saas");
+//		domainsToProcess.add("en_UK_kjv");
+//		domainsToProcess.add("en_US_eob");
+//		domainsToProcess.add("en_US_kjv");
+//		domainsToProcess.add("en_US_net");
+//		domainsToProcess.add("en_US_nkjv");
+//		domainsToProcess.add("en_US_rsv");
+//		domainsToProcess.add("en_US_saas");
 		
 		// Kenya
 		domainsToProcess.add("kik_KE_oak");
 		domainsToProcess.add("swh_KE_oak");
 		
 		// added by Meg
-		domainsToProcess.add("fra_FR_oaf");
-		domainsToProcess.add("spa_GT_odg");
+//		domainsToProcess.add("fra_FR_oaf");
+//		domainsToProcess.add("spa_GT_odg");
 
 		/**
 		 * Prepare a list to hold the create Queries
@@ -340,6 +340,7 @@ public class AresToNeo4j {
 					}
 				}
 				System.out.println(textsToCreate.size() + " create queries prepared...");
+				System.out.println("Targeting database at: " + url);
 				if (updateDatabaseNodes) {
 					System.out.println("Creating " + textsToCreate.size() + " nodes...");
 					for (TextLiturgical text : textsToCreate) {

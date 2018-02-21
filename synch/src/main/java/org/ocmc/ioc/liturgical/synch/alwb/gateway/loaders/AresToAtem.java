@@ -43,32 +43,39 @@ public class AresToAtem {
 
 		// Load the ares
 		LibraryProxyManager libProxyManager;
-		String alwbPath = "/Users/mac002/git/ages/ares/dcs/ages-alwb-library-gr-gr-cog/net.ages.liturgical.workbench.library_gr_GR_cog/Books-Collections";
-		String pathOut = "/Users/mac002/temp/";
+		String client = "_olw"; // if not for OLW set to empty string
+		String alwbPath = "/Users/mac002/git/ocmc-translation-projects/library-spa-gt-odg/library-spa-gt-odg/synaxarion";
+//		String alwbPath = "/Users/mac002/git/ages/ares/dcs/ages-alwb-library-gr-gr-cog/net.ages.liturgical.workbench.library_gr_GR_cog/Books-Collections";
+		String pathOut = "/Users/mac002/temp/aresToAtem/";
 		File out = new File(pathOut);
 		out.mkdirs();
 		List<String> domainsToProcess = new ArrayList<String>();
-		domainsToProcess.add("gr_GR_cog");
+		domainsToProcess.add("spa_gt_odg");
+//		domainsToProcess.add("gr_GR_cog");
 		System.out.println("Loading Ares files...");
 		libProxyManager = new LibraryProxyManager(alwbPath);
 		libProxyManager.loadAllLibraryFiles(domainsToProcess);
 		for (LibraryFileProxy fileProxy : libProxyManager.getLoadedFiles().values()) {
 			String resource = fileProxy.getResourceName(); // actors_gr_GR_cog
-			if (resource.startsWith("me.") || resource.startsWith("tr.") ) {
+			if (resource.startsWith("me.") 
+					|| resource.startsWith("sy.")
+					|| resource.startsWith("tr.")
+					) {
 				System.out.println(resource);
 				String [] parts = resource.split("_");
 				String resourceTopic = parts[0];
 				parts = resourceTopic.split("\\.");
 				if (resource.startsWith("me.")) {
 					out = new File(pathOut + "/" + parts[0] + "/" + parts[1] + "/" + parts[2]);
+				} else	if (resource.startsWith("sy.")) {
+						out = new File(pathOut + "/" + parts[0] + "/" + parts[1] + "/" + parts[2]);
 				} else {
 					out = new File(pathOut + "/" + parts[0] + "/" + parts[1]);
-					
 				}
 				out.mkdirs();
 				StringBuffer fileLines = new StringBuffer();
 				fileLines.append("Template ");
-				fileLines.append(resourceTopic);
+				fileLines.append(resourceTopic + client);
 				fileLines.append("\n\nStatus Final\n\n");
 				List<String> topics = new ArrayList<String>();
 				StringBuffer sids = new StringBuffer();
@@ -131,7 +138,7 @@ public class AresToAtem {
 				fileLines.append("\n");
 				fileLines.append(sids.toString());
 				fileLines.append("\nEnd-Template");
-				out = new File(out.getAbsolutePath() + "/" + resource + ".atem");
+				out = new File(out.getAbsolutePath() + "/bk." + resourceTopic + client +  ".atem");
 				org.ocmc.ioc.liturgical.utils.FileUtils.writeFile(out.getAbsolutePath(), fileLines.toString());
 			}
 		}

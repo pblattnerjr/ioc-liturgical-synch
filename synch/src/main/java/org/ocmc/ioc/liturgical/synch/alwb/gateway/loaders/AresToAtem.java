@@ -74,7 +74,7 @@ public class AresToAtem {
 				}
 				out.mkdirs();
 				StringBuffer fileLines = new StringBuffer();
-				fileLines.append("Template ");
+				fileLines.append("Template bk.");
 				fileLines.append(resourceTopic + client);
 				fileLines.append("\n\nStatus Final\n\n");
 				List<String> topics = new ArrayList<String>();

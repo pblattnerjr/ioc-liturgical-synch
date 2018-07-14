@@ -3,7 +3,7 @@ package org.ocmc.ioc.liturgical.synch.constants;
 import java.util.concurrent.TimeUnit;
 
 public class Constants {
-	public static final String VERSION = "1.1.1"; // should match most recent jar
+	public static final String VERSION = "1.1.2"; // should match most recent jar
 	public static final int boltDriverConnectionTimeout = 30;
 	public static final TimeUnit boltDriverConnectionTimeoutUnits = TimeUnit.SECONDS;
 	public static final String LIBRARY_SYNCH = "en_sys_synch";

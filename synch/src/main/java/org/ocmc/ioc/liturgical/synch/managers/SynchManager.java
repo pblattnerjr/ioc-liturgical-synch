@@ -925,6 +925,7 @@ public class SynchManager {
 					, ares.toLibrary
 					, ares.toTopic
 					, ares.getRequestingUser()
+					, "agesgithub"
 				);
 				break;
 			case CHANGE_OF_VALUE: // treat same as ADD_KEY_VALUE
@@ -1133,6 +1134,7 @@ public class SynchManager {
 			, String toLibrary
 			, String toTopic
 			, String committerName
+			, String server
 			) {
 		String combinedFrom = "";
 		String combinedTo = "";
@@ -1157,6 +1159,7 @@ public class SynchManager {
 			Transaction trans = new Transaction(
 					query
 					, committerName
+					, server
 					);
 			trans.setFromAres(true);
 			this.recordTransaction(trans);
@@ -1168,6 +1171,7 @@ public class SynchManager {
 			trans = new Transaction(
 					complexLibrary
 					, committerName
+					, server
 					);
 			trans.setFromAres(true);
 			this.recordTransaction(trans);
@@ -1179,6 +1183,7 @@ public class SynchManager {
 			trans = new Transaction(
 					complexTopic
 					, committerName
+					, server
 					);
 			trans.setFromAres(true);
 			this.recordTransaction(trans);
@@ -1190,6 +1195,7 @@ public class SynchManager {
 			trans = new Transaction(
 					complexKey
 					, committerName
+					, server
 					);
 			trans.setFromAres(true);
 			this.recordTransaction(trans);

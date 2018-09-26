@@ -12,7 +12,7 @@ public class GitLabUtilsTest {
 
 	static String token = "";
 	static GitLabUtils utils = null;
-	static String url = "https://gitlab.ioc-tms.org";
+	static String url = "https://gitlab.liml.org";
 
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {

@@ -1051,8 +1051,12 @@ public class SynchManager {
 	}
 
 	/**
-	 * Rather than actually delete a doc, we will rename all its labels by
-	 * prefixing them with DELETED_
+	 * Rather than actually delete a doc, we change replace it labels with 
+	 * DELETED_Root
+	 * See below: that was a bad idea.  It actually results in doubling the
+	 * number of indexes.
+//	 * will rename all its labels by
+//	 * prefixing them with DELETED_
 	 * @param doc the doc for which to create the queries
 	 * @return list of queries to rename each label for this doc to one that has DELETE_ as its prefix
 	 */
@@ -1060,15 +1064,16 @@ public class SynchManager {
 		List<String> result = new ArrayList<String>();
 		StringBuffer sbFrom = new StringBuffer();
 		StringBuffer sbTo = new StringBuffer();
+		sbTo.append(DELETED_LABEL_PREFIX + "Root");
 		for (String label : doc.fetchOntologyLabelsList()) {
 			if (sbFrom.length() > 0) {
 				sbFrom.append(":");
 			}
 			sbFrom.append(label);
-			if (sbTo.length() > 0) {
-				sbTo.append(":");
-			}
-			sbTo.append(DELETED_LABEL_PREFIX + label);
+//			if (sbTo.length() > 0) {
+//				sbTo.append(":");
+//			}
+//			sbTo.append(DELETED_LABEL_PREFIX + label);
 		}
 		StringBuffer sb = new StringBuffer();
 		sb.append("match (n:Root) where n.id = '");

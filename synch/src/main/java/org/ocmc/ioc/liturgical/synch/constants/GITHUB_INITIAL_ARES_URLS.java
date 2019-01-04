@@ -5,12 +5,15 @@ import org.ocmc.ioc.liturgical.schemas.models.synch.GithubRepositories;
 import org.ocmc.ioc.liturgical.utils.ErrorUtils;
 
 public enum GITHUB_INITIAL_ARES_URLS {
-	EN_UK_LASH("https://github.com/AGES-Initiatives/ages-alwb-library-lash.git")
+	EN_FR_OMVOL("https://github.com/AGES-Initiatives/ages-alwb-library-en-fr-omvol.git")
+	, EN_UK_LASH("https://github.com/AGES-Initiatives/ages-alwb-library-lash.git")
+	, EN_UK_WARE("https://github.com/AGES-Initiatives/ages-alwb-library-en-uk-ware.git")
 	, EN_US_ANDRONACHE("https://github.com/AGES-Initiatives/ages-alwb-library-en-us-andronache.git")
 	, EN_US_BARRETT("https://github.com/AGES-Initiatives/ages-alwb-library-en-us-barrett.git")
 	, EN_US_BOYER("https://github.com/AGES-Initiatives/ages-alwb-library-en-us-boyer.git")
 	, EN_US_CONSTANTINIDES("https://github.com/AGES-Initiatives/ages-alwb-library-en-us-constantinides.git")
 	, EN_US_DEDES("https://github.com/AGES-Initiatives/ages-alwb-library-en-us-dedes.git")
+	, EN_US_DUVALL("https://github.com/AGES-Initiatives/ages-alwb-library-en-us-duvall.git")
 	, EN_US_GOA("https://github.com/AGES-Initiatives/ages-alwb-library-en-us-goa.git")
 	, EN_US_HOLYCROSS("https://github.com/AGES-Initiatives/ages-alwb-library-en-us-holycross.git")
 	, EN_US_OCA("https://github.com/AGES-Initiatives/ages-alwb-library-en-us-oca.git")

@@ -1,0 +1,6 @@
+*.class
+synch/.idea/
+2019-01-02.dump
+TOKENS.txt
+synch/target/classes/log4j.properties
+synch/target/classes/app.config
